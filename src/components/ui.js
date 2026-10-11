@@ -3,57 +3,19 @@
 import { useEffect, useState } from 'react';
 
 /* ---------------------------------------------------------------- */
-/* Brand mark — drop your own /public/logo.png in and it is used     */
-/* automatically; otherwise this clean wordmark is shown.            */
+/* Brand mark — the official Mihad Training logo.                    */
+/*   /public/logo.png        full colour, for light backgrounds       */
+/*   /public/logo-white.png  reversed, for the maroon sidebar/panels  */
 /* ---------------------------------------------------------------- */
 
-/* Arch mark — echoes the arched form in the Al Mihad logo. */
-export function ArchMark({ className = 'h-9 w-8', tone = 'gold' }) {
-  const fill = tone === 'gold' ? '#C9A227' : '#7A1418';
-  const line = tone === 'gold' ? '#7A1418' : '#C9A227';
+export function Logo({ light = true, className = 'h-12 w-auto' }) {
   return (
-    <svg viewBox="0 0 36 42" className={className} aria-hidden>
-      <path d="M2 42V19C2 10 9.5 4 18 0c8.5 4 16 10 16 19v23z" fill={fill} />
-      <path d="M10.5 42V21.5c0-5 3.2-8.6 7.5-10.8 4.3 2.2 7.5 5.8 7.5 10.8V42" fill="none" stroke={line} strokeWidth="2.6" />
-      <path d="M18 17.5v24.5" stroke={line} strokeWidth="2" />
-    </svg>
-  );
-}
-
-export function Logo({ compact = false, light = true }) {
-  // Probe for /public/logo.png on the client. Starting with the wordmark means
-  // no broken-image flash, and an <img> that fails before hydration (where
-  // onError never fires) cannot leave a broken icon on screen.
-  const [hasLogo, setHasLogo] = useState(false);
-
-  useEffect(() => {
-    const img = new window.Image();
-    img.onload = () => setHasLogo(true);
-    img.onerror = () => setHasLogo(false);
-    img.src = '/logo.png';
-  }, []);
-
-  if (hasLogo) {
-    return (
-      /* eslint-disable-next-line @next/next/no-img-element */
-      <img src="/logo.png" alt="Al Mihad Training Centre" className={compact ? 'h-8 w-auto' : 'h-11 w-auto'} />
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-2.5">
-      <ArchMark className={compact ? 'h-9 w-8' : 'h-11 w-10'} />
-      {!compact && (
-        <span className="leading-tight">
-          <span className={`block text-[15px] font-extrabold tracking-[0.08em] ${light ? 'text-white' : 'text-maroon'}`}>
-            AL MIHAD
-          </span>
-          <span className={`block text-[10px] font-semibold uppercase tracking-[0.2em] ${light ? 'text-gold' : 'text-gold-600'}`}>
-            Training Centre
-          </span>
-        </span>
-      )}
-    </div>
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={light ? '/logo-white.png' : '/logo.png'}
+      alt="Mihad Training — Learn Lead Succeed"
+      className={className}
+    />
   );
 }
 

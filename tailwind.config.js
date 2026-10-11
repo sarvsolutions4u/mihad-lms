@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 // Al Mihad Training Centre — brand palette
-//   maroon  #7A1418  primary (sidebar, headings, primary buttons)
+//   maroon  #7A121D  primary — matches the logo square (sidebar, headings, buttons)
 //   gold    #C9A227  accent  (active nav, highlights, tagline)
 //   cream   #FBF6E9  warm tint for panels and page background
 module.exports = {
@@ -9,7 +9,7 @@ module.exports = {
     extend: {
       colors: {
         maroon: {
-          DEFAULT: '#7A1418',
+          DEFAULT: '#7A121D',
           50: '#FBF3F3',
           100: '#F4E2E3',
           600: '#94222A',

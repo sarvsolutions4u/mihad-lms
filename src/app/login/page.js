@@ -44,10 +44,10 @@ export default function LoginPage() {
 
         <div className="relative max-w-lg">
           <div className="mb-10">
-            <Logo />
+            <Logo className="h-24 w-auto" />
           </div>
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-gold">
-            Learning Portal · Educate to Innovate
+            Learning Portal
           </p>
           <h1 className="text-4xl font-bold leading-tight text-white xl:text-5xl">
             Every course, every learner, one clear view.
@@ -76,7 +76,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center bg-cream-50 px-5 py-14">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
-            <Logo light={false} />
+            <Logo light={false} className="h-16 w-auto" />
           </div>
 
           <h2 className="text-2xl font-bold text-maroon">Sign in</h2>

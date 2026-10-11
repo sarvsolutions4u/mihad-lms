@@ -131,9 +131,15 @@ same file can safely be uploaded twice.
 
 ## Adding your logo
 
-Drop the Al Mihad logo at **`public/logo.png`** (a transparent PNG with a light/white version of the
-wordmark works best on the maroon sidebar) and it appears in the sidebar and on the sign-in
-screen automatically. Without it, a built-in gold arch mark with the AL MIHAD wordmark is used.
+The official Mihad Training logo is already included:
+
+| File | Used on |
+|---|---|
+| `public/logo-white.png` | maroon sidebar and sign-in panel (white text, gold tagline) |
+| `public/logo.png` | light backgrounds — mobile sign-in and mobile header |
+| `src/app/icon.png`, `src/app/apple-icon.png` | browser tab and phone home-screen icon |
+
+To update the logo, replace those files with new ones of the same name.
 
 ### Brand colours
 
@@ -141,7 +147,7 @@ Defined once in `tailwind.config.js`:
 
 | Token | Hex | Used for |
 |---|---|---|
-| `maroon` | `#7A1418` | sidebar, login panel, headings, primary buttons |
+| `maroon` | `#7A121D` | sidebar, login panel, headings, primary buttons |
 | `gold` | `#C9A227` | active menu item, highlights, tagline |
 | `cream` | `#FBF6E9` | warm panels and the sign-in background |
 

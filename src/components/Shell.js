@@ -38,12 +38,9 @@ export default function Shell({ children }) {
 
   const sidebar = (
     <nav className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-white/10 px-5 py-4">
-        <Logo compact />
-        <span className="ml-1 leading-tight">
-          <span className="block text-[14px] font-extrabold tracking-[0.08em] text-white">AL MIHAD</span>
-          <span className="block text-[9px] uppercase tracking-[0.16em] text-gold">Learning Portal</span>
-        </span>
+      <div className="border-b border-white/10 px-5 pb-4 pt-5">
+        <Logo className="h-14 w-auto" />
+        <span className="mt-2 block text-[9px] font-semibold uppercase tracking-[0.2em] text-white/60">Learning Portal</span>
       </div>
 
       <ul className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
@@ -111,13 +108,13 @@ export default function Shell({ children }) {
           >
             <Icon name="menu" />
           </button>
-          <span className="text-sm font-bold text-maroon">Al Mihad Learning Portal</span>
+          <Logo light={false} className="h-8 w-auto" />
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
 
         <footer className="px-4 pb-6 text-center text-[11px] text-slate-400 sm:px-6 lg:px-8">
-          Al Mihad Training Centre · Sharjah — Educate to Innovate
+          Al Mihad Training Centre · Sharjah — Learn. Lead. Succeed.
         </footer>
       </div>
     </div>
