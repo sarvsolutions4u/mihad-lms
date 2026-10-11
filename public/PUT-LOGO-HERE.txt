@@ -1,0 +1,8 @@
+Save your logo in this folder as:
+
+    logo.png
+
+It will then appear automatically in the sidebar and on the sign-in screen.
+A transparent PNG about 400 x 120 pixels works best.
+
+Until you add it, the built-in arch mark with the "AL MIHAD — Training Centre" wordmark is shown instead.
