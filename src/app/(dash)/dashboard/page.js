@@ -4,17 +4,32 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, fmtDate } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
-import { PageHeader, Card, Stat, Badge, Empty, Spinner, Alert } from '@/components/ui';
+import { PageHeader, Card, Stat, Badge, Empty, Spinner, Alert, JoinButton } from '@/components/ui';
 import Icon from '@/components/Icon';
+import SubjectCard from '@/components/SubjectCard';
+import { classLinkFor } from '@/lib/links';
+
+const money = (n) => `AED ${(Number(n) || 0).toLocaleString()}`;
 
 export default function DashboardPage() {
   const { user } = useSession();
   const [data, setData] = useState(null);
+  const [subjects, setSubjects] = useState(null);
+  const [alerts, setAlerts] = useState(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     api.get('/api/dashboard').then(setData).catch((e) => setError(e.message));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === 'admin') {
+      api.get('/api/alerts').then(setAlerts).catch(() => {});
+    } else {
+      api.get('/api/subjects').then((r) => setSubjects(r.items)).catch(() => {});
+    }
+  }, [user]);
 
   if (error) return <Alert>{error}</Alert>;
   if (!data) return <Spinner />;
@@ -33,11 +48,75 @@ export default function DashboardPage() {
         subtitle={`${data.dayName}, ${fmtDate(data.today)} · week beginning ${fmtDate(data.weekOf)}`}
       />
 
+      {alerts && alerts.count > 0 && (
+        <Card
+          className="mb-6 border-red-200"
+          title={
+            <span className="flex items-center gap-2 text-red-700">
+              <Icon name="bell" className="h-4 w-4" /> Fee alerts
+            </span>
+          }
+          action={
+            <Link href="/fees?filter=overdue" className="text-xs font-semibold text-maroon hover:text-gold-600">
+              Open fees →
+            </Link>
+          }
+          bodyClass=""
+        >
+          <ul className="divide-y divide-slate-100">
+            {[...alerts.overdue.map((f) => ({ ...f, kind: 'overdue' })), ...alerts.dueSoon.map((f) => ({ ...f, kind: 'soon' }))]
+              .slice(0, 6)
+              .map((f) => (
+                <li key={f._id} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <Link href={`/students/${f.student?._id}`} className="truncate text-sm font-semibold text-slate-800 hover:text-maroon hover:underline">
+                      {f.student?.name || 'Student'}
+                    </Link>
+                    <p className="truncate text-xs text-slate-500">
+                      {f.title}
+                      {f.student?.classRoom?.name ? ` · ${f.student.classRoom.name}` : ''}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-bold text-maroon">{money(f.balance)}</p>
+                    <Badge tone={f.kind === 'overdue' ? 'red' : 'amber'}>
+                      {f.kind === 'overdue' ? 'Overdue since' : 'Due'} {fmtDate(f.dueDate)}
+                    </Badge>
+                  </div>
+                </li>
+              ))}
+          </ul>
+          {alerts.count > 6 && (
+            <p className="border-t border-slate-100 px-5 py-2.5 text-xs text-slate-500">
+              +{alerts.count - 6} more — {alerts.overdue.length} overdue ({money(alerts.overdueTotal)}), {alerts.dueSoon.length} due this week
+            </p>
+          )}
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {data.stats.map((s) => (
           <Stat key={s.label} {...s} />
         ))}
       </div>
+
+      {subjects && subjects.length > 0 && (
+        <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-maroon">
+              {user?.role === 'parent' ? 'Subjects' : 'My subjects'}
+            </h2>
+            <Link href="/subjects" className="text-xs font-semibold text-maroon hover:text-gold-600">
+              All →
+            </Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {subjects.slice(0, 6).map((s) => (
+              <SubjectCard key={s._id} s={s} link={classLinkFor({ subject: s, classRoom: s.classRoom })} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -45,7 +124,7 @@ export default function DashboardPage() {
             {data.sections.todayClasses?.length ? (
               <ul className="divide-y divide-slate-100">
                 {data.sections.todayClasses.map((slot) => {
-                  const link = slot.onlineClassLink || slot.subject?.onlineClassLink || slot.classRoom?.onlineClassLink;
+                  const link = classLinkFor({ slot });
                   return (
                     <li key={slot._id} className="flex items-center gap-4 px-5 py-3.5">
                       <div className="w-24 shrink-0">
@@ -53,21 +132,16 @@ export default function DashboardPage() {
                         <p className="text-[11px] text-slate-400">{slot.endTime}</p>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-800">
+                        <Link href={`/subjects/${slot.subject?._id}`} className="block truncate text-sm font-semibold text-slate-800 hover:text-maroon hover:underline">
                           {slot.subject?.name || 'Subject'}
-                        </p>
+                        </Link>
                         <p className="truncate text-xs text-slate-500">
                           {slot.classRoom?.name}
                           {slot.teacher?.name ? ` · ${slot.teacher.name}` : ''}
                           {slot.room ? ` · ${slot.room}` : ''}
                         </p>
                       </div>
-                      {link && (
-                        <a href={link} target="_blank" rel="noreferrer" className="btn-gold btn-sm">
-                          <Icon name="link" className="h-3.5 w-3.5" />
-                          Join
-                        </a>
-                      )}
+                      {link && <JoinButton url={link} label="Join" />}
                     </li>
                   );
                 })}
@@ -183,9 +257,14 @@ export default function DashboardPage() {
                         {c.admissionNo ? ` · ${c.admissionNo}` : ''}
                       </p>
                     </div>
-                    <Link href={`/reports?student=${c._id}`} className="btn-ghost btn-sm">
-                      Report
-                    </Link>
+                    <div className="flex gap-2">
+                      <Link href={`/students/${c._id}`} className="btn-gold btn-sm">
+                        Details
+                      </Link>
+                      <Link href={`/reports?student=${c._id}`} className="btn-ghost btn-sm">
+                        Report
+                      </Link>
+                    </div>
                   </li>
                 ))}
               </ul>

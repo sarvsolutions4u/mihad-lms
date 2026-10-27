@@ -73,3 +73,9 @@ input[type='number']::-webkit-inner-spin-button {
 input[type='number'] {
   -moz-appearance: textfield;
 }
+
+/* brand colour for native checkboxes, radios and date pickers */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: #7a121d;
+}

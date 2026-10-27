@@ -1,5 +1,7 @@
 import { dbConnect } from '@/lib/db';
-import { MODELS } from '@/models';
+import { MODELS, Attendance, Mark, Submission, Fee, User } from '@/models';
+import { cleanLinks } from '@/lib/links';
+import { deleteFile, fileIdFromUrl } from '@/lib/files';
 import { requireSession, hashPassword } from '@/lib/auth';
 import { getActorContext, POLICY, POPULATE, stripProtected } from '@/lib/access';
 import { ok, fail, handleError } from '@/lib/api';
@@ -55,9 +57,11 @@ export async function PATCH(req, ctxParams) {
     const { doc, ctx } = await loadScoped(key, id, session);
     if (!doc) return fail('Not found, or outside your access', 404);
 
-    const body = stripProtected(await req.json());
+    const body = cleanLinks(key, stripProtected(await req.json()));
 
     if (key === 'users') {
+      // subject enrolment is decided by the office
+      if (session.role === 'teacher') delete body.subjects;
       if (body.password) {
         body.passwordHash = await hashPassword(body.password);
         delete body.password;
@@ -79,6 +83,14 @@ export async function PATCH(req, ctxParams) {
       if (String(doc.student) !== ctx.uid) return fail('Not your submission', 403);
       delete body.score;
       delete body.feedback;
+    }
+    if (key === 'submissions' && session.role === 'teacher') {
+      // a teacher only grades — the student's work itself is left untouched
+      for (const f of Object.keys(body)) if (!['score', 'feedback'].includes(f)) delete body[f];
+    }
+
+    if (key === 'fees' && Array.isArray(body.payments)) {
+      body.payments = body.payments.map((p) => (p.recordedBy ? p : { ...p, recordedBy: ctx.uid, recordedAt: new Date() }));
     }
 
     if (key === 'lessonplans' && body.portionCompleted === true && !doc.completedAt) {
@@ -113,6 +125,31 @@ export async function DELETE(req, ctxParams) {
     }
     if (key === 'lessonplans' && session.role === 'teacher' && String(doc.teacher) !== ctx.uid) {
       return fail('This lesson plan belongs to another teacher', 403);
+    }
+
+    // Removing a student clears everything that belongs to them.
+    if (key === 'users' && doc.role === 'student') {
+      const fees = await Fee.find({ student: doc._id }).select('payments attachments').lean();
+      const fileIds = fees
+        .flatMap((f) => [...(f.payments || []).map((p) => p.receipt?.url), ...(f.attachments || []).map((a) => a.url)])
+        .map(fileIdFromUrl)
+        .filter(Boolean);
+      await Promise.all([
+        Attendance.deleteMany({ student: doc._id }),
+        Mark.deleteMany({ student: doc._id }),
+        Submission.deleteMany({ student: doc._id }),
+        Fee.deleteMany({ student: doc._id }),
+        User.updateMany({ children: doc._id }, { $pull: { children: doc._id } }),
+        ...fileIds.map((fid) => deleteFile(fid).catch(() => {})),
+      ]);
+    }
+
+    // A deleted fee takes its receipts and invoices with it.
+    if (key === 'fees') {
+      const ids = [...(doc.payments || []).map((p) => p.receipt?.url), ...(doc.attachments || []).map((a) => a.url)]
+        .map(fileIdFromUrl)
+        .filter(Boolean);
+      await Promise.all(ids.map((fid) => deleteFile(fid).catch(() => {})));
     }
 
     await doc.deleteOne();

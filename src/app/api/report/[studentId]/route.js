@@ -2,6 +2,7 @@ import { dbConnect } from '@/lib/db';
 import { User, Subject, LessonPlan, Mark, Attendance } from '@/models';
 import { requireSession } from '@/lib/auth';
 import { getActorContext } from '@/lib/access';
+import { subjectIdsForStudent } from '@/lib/enrol';
 import { ok, fail, handleError } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export async function GET(req, ctxParams) {
     if (!allowed) return fail('You do not have access to this student', 403);
 
     const student = await User.findById(studentId)
-      .select('name admissionNo classRoom email')
+      .select('name admissionNo classRoom email subjects')
       .populate('classRoom', 'name onlineClassLink')
       .lean();
     if (!student) return fail('Student not found', 404);
@@ -35,11 +36,13 @@ export async function GET(req, ctxParams) {
     const from = searchParams.get('from') || '';
     const to = searchParams.get('to') || '';
 
-    const subjects = await Subject.find({ classRoom: student.classRoom?._id })
+    // only the subjects this student is enrolled in
+    const subjectIds = await subjectIdsForStudent(student);
+    const subjects = await Subject.find({ _id: { $in: subjectIds } })
       .populate('teacher', 'name')
       .lean();
 
-    const planFilter = { classRoom: student.classRoom?._id };
+    const planFilter = { subject: { $in: subjectIds } };
     if (from || to) {
       planFilter.weekOf = {};
       if (from) planFilter.weekOf.$gte = from;

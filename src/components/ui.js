@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Icon from './Icon';
+import { normalizeUrl, meetingApp } from '@/lib/links';
+import { ACCEPT, MAX_FILE_MB, isStoredFile, downloadUrl, fmtSize } from '@/lib/fileTypes';
 
 /* ---------------------------------------------------------------- */
 /* Brand mark — the official Mihad Training logo.                    */
@@ -235,22 +238,108 @@ export function Confirm({ open, onClose, onConfirm, message = 'Delete this recor
   );
 }
 
+/** Upload one file to the app's storage. Returns { url, fileName, size }. */
+export async function uploadFile(file, { purpose, student } = {}) {
+  if (!file) throw new Error('Choose a file first');
+  if (file.size > MAX_FILE_MB * 1024 * 1024) {
+    throw new Error(`"${file.name}" is larger than ${MAX_FILE_MB} MB. Compress it, or paste a Google Drive / YouTube link instead.`);
+  }
+  const fd = new FormData();
+  fd.append('file', file);
+  if (purpose) fd.append('purpose', purpose);
+  if (student) fd.append('student', student);
+  const res = await fetch('/api/upload', { method: 'POST', body: fd });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* non-JSON (e.g. the host rejected a large body) */
+  }
+  if (!res.ok || !data || data.ok === false) {
+    throw new Error(data?.error || (res.status === 413 ? `File is larger than ${MAX_FILE_MB} MB` : 'Upload failed'));
+  }
+  return data;
+}
+
 /** A file field that accepts EITHER an upload or a pasted link. */
-export function FileOrLink({ value, onChange, name = 'Attachment' }) {
+export function FileOrLink({ value, onChange, name = 'Attachment', fileName = '', purpose, student, hint }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const inputId = `f-${name.replace(/\W+/g, '-').toLowerCase()}`;
 
   async function upload(file) {
     if (!file) return;
     setBusy(true);
     setErr('');
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok || data.ok === false) throw new Error(data.error || 'Upload failed');
-      onChange(data.url, data.fileName);
+      const data = await uploadFile(file, { purpose, student });
+      onChange(data.url, data.fileName, data.size);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const stored = isStoredFile(value);
+
+  return (
+    <div>
+      <span className="label">{name}</span>
+      {stored ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+          <span className="text-xs font-semibold text-emerald-800">Uploaded:</span>
+          <FileLink url={value} name={fileName || 'file'} compact />
+          <button type="button" className="ml-auto text-xs font-semibold text-red-700 hover:underline" onClick={() => onChange('', '')}>
+            Remove
+          </button>
+        </div>
+      ) : (
+        <input
+          className="input"
+          placeholder="Paste a link (Google Drive, OneDrive, YouTube…) — or upload a file below"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+      <div className="mt-2 flex items-center gap-3">
+        <input
+          id={inputId}
+          type="file"
+          accept={ACCEPT}
+          onChange={(e) => {
+            upload(e.target.files?.[0]);
+            e.target.value = '';
+          }}
+          disabled={busy}
+          className="block w-full text-xs text-slate-500 file:mr-3 file:rounded-md file:border-0
+                     file:bg-maroon-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold
+                     file:text-maroon hover:file:bg-maroon-100"
+        />
+        {busy && <span className="shrink-0 text-xs font-semibold text-maroon">Uploading…</span>}
+      </div>
+      <p className="mt-1 text-[11px] text-slate-400">{hint || `PDF, Word, Excel, PowerPoint, images, audio or MP4 — up to ${MAX_FILE_MB} MB.`}</p>
+      {err && <p className="mt-1 text-xs font-medium text-red-700">{err}</p>}
+    </div>
+  );
+}
+
+/** A list of files (multi-attach) — e.g. lesson plan documents, fee invoices. */
+export function FileList({ value = [], onChange, name = 'Files', purpose, student }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [link, setLink] = useState('');
+
+  async function add(files) {
+    setBusy(true);
+    setErr('');
+    try {
+      const added = [];
+      for (const f of Array.from(files || [])) {
+        const d = await uploadFile(f, { purpose, student });
+        added.push({ url: d.url, name: d.fileName, size: d.size });
+      }
+      onChange([...(value || []), ...added]);
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -261,24 +350,113 @@ export function FileOrLink({ value, onChange, name = 'Attachment' }) {
   return (
     <div>
       <span className="label">{name}</span>
+      {!!value?.length && (
+        <ul className="mb-2 space-y-1.5">
+          {value.map((f, i) => (
+            <li key={`${f.url}-${i}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5">
+              <FileLink url={f.url} name={f.name} size={f.size} compact />
+              <button
+                type="button"
+                className="ml-auto text-xs font-semibold text-red-700 hover:underline"
+                onClick={() => onChange(value.filter((_, j) => j !== i))}
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <input
-        className="input"
-        placeholder="Paste a link (Google Drive, OneDrive, YouTube…)"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        type="file"
+        multiple
+        accept={ACCEPT}
+        disabled={busy}
+        onChange={(e) => {
+          add(e.target.files);
+          e.target.value = '';
+        }}
+        className="block w-full text-xs text-slate-500 file:mr-3 file:rounded-md file:border-0
+                   file:bg-maroon-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold
+                   file:text-maroon hover:file:bg-maroon-100"
       />
-      <div className="mt-2 flex items-center gap-3">
-        <input
-          type="file"
-          onChange={(e) => upload(e.target.files?.[0])}
-          disabled={busy}
-          className="block w-full text-xs text-slate-500 file:mr-3 file:rounded-md file:border-0
-                     file:bg-maroon-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold
-                     file:text-maroon hover:file:bg-maroon-100"
-        />
-        {busy && <span className="text-xs text-slate-500">Uploading…</span>}
+      <div className="mt-2 flex gap-2">
+        <input className="input py-1.5 text-xs" placeholder="…or paste a link" value={link} onChange={(e) => setLink(e.target.value)} />
+        <button
+          type="button"
+          className="btn-ghost btn-sm"
+          disabled={!link.trim()}
+          onClick={() => {
+            onChange([...(value || []), { url: link.trim(), name: link.trim().replace(/^https?:\/\//, '').slice(0, 60) }]);
+            setLink('');
+          }}
+        >
+          Add link
+        </button>
       </div>
-      {err && <p className="mt-1 text-xs text-amber-700">{err}</p>}
+      <p className="mt-1 text-[11px] text-slate-400">
+        {busy ? 'Uploading…' : `You can pick several files at once — up to ${MAX_FILE_MB} MB each.`}
+      </p>
+      {err && <p className="mt-1 text-xs font-medium text-red-700">{err}</p>}
+    </div>
+  );
+}
+
+/** Open / Download for a stored file or an outside link. */
+export function FileLink({ url, name, size, compact = false }) {
+  if (!url) return null;
+  const href = normalizeUrl(url);
+  const stored = isStoredFile(href);
+  const label = name || (stored ? 'File' : href.replace(/^https?:\/\//, '').slice(0, 40));
+  return (
+    <span className={`inline-flex min-w-0 items-center gap-1.5 ${compact ? '' : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5'}`}>
+      <Icon name={stored ? 'file' : 'link'} className="h-3.5 w-3.5 shrink-0 text-maroon" />
+      <a href={href} target="_blank" rel="noreferrer" className="truncate text-xs font-semibold text-maroon hover:underline" title={label}>
+        {label}
+      </a>
+      {size ? <span className="shrink-0 text-[10px] text-slate-400">{fmtSize(size)}</span> : null}
+      {stored && (
+        <a href={downloadUrl(href)} className="shrink-0 rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-maroon" title="Download" aria-label={`Download ${label}`}>
+          <Icon name="download" className="h-3.5 w-3.5" />
+        </a>
+      )}
+    </span>
+  );
+}
+
+/** Opens the online class (Zoom / Meet / Teams) in a new tab — the app takes over from there. */
+export function JoinButton({ url, size = 'sm', label }) {
+  const href = normalizeUrl(url);
+  if (!href) return null;
+  const app = meetingApp(href);
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className={`btn-gold ${size === 'sm' ? 'btn-sm' : ''}`}>
+      <Icon name="video" className="h-3.5 w-3.5" />
+      {label || (app ? `Join on ${app}` : 'Join class')}
+    </a>
+  );
+}
+
+/** Small tab bar used on detail pages. */
+export function Tabs({ tabs, value, onChange }) {
+  return (
+    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-slate-200">
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          onClick={() => onChange(t.key)}
+          className={`-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+            value === t.key ? 'border-maroon text-maroon' : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          {t.label}
+          {t.count !== undefined && t.count !== null && (
+            <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] ${value === t.key ? 'bg-maroon text-white' : 'bg-slate-100 text-slate-500'}`}>
+              {t.count}
+            </span>
+          )}
+        </button>
+      ))}
     </div>
   );
 }

@@ -10,10 +10,27 @@ const ObjectId = Schema.Types.ObjectId;
 export const ROLES = ['admin', 'teacher', 'student', 'parent'];
 export const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const ATTENDANCE_STATUS = ['present', 'absent', 'late', 'excused'];
-export const RESOURCE_TYPES = ['note', 'pdf', 'doc', 'ppt', 'video', 'link', 'image', 'other'];
+export const RESOURCE_TYPES = ['note', 'pdf', 'doc', 'ppt', 'paper', 'video', 'link', 'image', 'other'];
+export const PAYMENT_METHODS = ['cash', 'card', 'bank transfer', 'cheque', 'online', 'other'];
 export const TASK_TYPES = ['assignment', 'worksheet'];
 export const AUDIENCES = ['all', 'teachers', 'students', 'parents'];
 export const FEE_STATUS = ['pending', 'partial', 'paid', 'overdue'];
+
+/** "YYYY-MM-DD" today in Dubai — used to work out overdue fees. */
+const dubaiToday = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(
+    new Date()
+  );
+
+/** A file stored in the app (/api/files/…) or an outside link. */
+const FileRefSchema = new Schema(
+  {
+    url: { type: String, trim: true, default: '' },
+    name: { type: String, trim: true, default: '' },
+    size: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
 
 /* ------------------------------------------------------------------ */
 /* 1. User — admin / teacher / student / parent in one collection      */
@@ -31,7 +48,8 @@ const UserSchema = new Schema(
     // student-only
     classRoom: { type: ObjectId, ref: 'ClassRoom', index: true },
     admissionNo: { type: String, trim: true },
-    subjects: [{ type: ObjectId, ref: 'Subject' }], // student: enrolled; teacher: assigned
+    // student: the subjects they are enrolled in. Empty = every subject of their class.
+    subjects: [{ type: ObjectId, ref: 'Subject', index: true }],
 
     // parent-only — one parent may have several children
     children: [{ type: ObjectId, ref: 'User', index: true }],
@@ -132,9 +150,47 @@ const FeeSchema = new Schema(
     status: { type: String, enum: FEE_STATUS, default: 'pending' },
     note: { type: String, trim: true, default: '' },
     receiptNo: { type: String, trim: true, default: '' },
+
+    // every payment received, each with its own receipt file
+    payments: [
+      {
+        amount: { type: Number, required: true, min: 0 },
+        date: { type: String, default: '' }, // "YYYY-MM-DD"
+        method: { type: String, trim: true, default: 'cash' },
+        receiptNo: { type: String, trim: true, default: '' },
+        note: { type: String, trim: true, default: '' },
+        receipt: { type: FileRefSchema, default: undefined },
+        recordedBy: { type: ObjectId, ref: 'User' },
+        recordedAt: { type: Date, default: Date.now },
+      },
+    ],
+    // invoices or other documents for this fee
+    attachments: [FileRefSchema],
   },
   { timestamps: true }
 );
+
+FeeSchema.index({ status: 1, dueDate: 1 });
+
+/** Work out paid amount and status, so they can never drift out of step. */
+export function computeFeeStatus(fee, today = dubaiToday()) {
+  const amount = Number(fee.amount) || 0;
+  const paid = Number(fee.paidAmount) || 0;
+  if (amount > 0 && paid >= amount) return 'paid';
+  if (fee.dueDate && fee.dueDate < today) return 'overdue';
+  if (paid > 0) return 'partial';
+  return 'pending';
+}
+
+FeeSchema.pre('save', function feeTotals() {
+  if (this.payments?.length) {
+    this.paidAmount = this.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const last = [...this.payments].sort((a, b) => String(a.date).localeCompare(String(b.date))).pop();
+    if (last?.date) this.paidDate = last.date;
+    if (last?.receiptNo) this.receiptNo = last.receiptNo;
+  }
+  this.status = computeFeeStatus(this);
+});
 
 /* ------------------------------------------------------------------ */
 /* 7. LessonPlan — the heart of the weekly reporting loop              */
@@ -163,6 +219,7 @@ const LessonPlanSchema = new Schema(
     maxMarks: { type: Number, default: 0 },
 
     teacherRemark: { type: String, trim: true, default: '' },
+    attachments: [FileRefSchema], // plan document, notes, slides…
     completedAt: Date,
   },
   { timestamps: true }
@@ -239,6 +296,7 @@ const SubmissionSchema = new Schema(
     task: { type: ObjectId, ref: 'Task', required: true, index: true },
     student: { type: ObjectId, ref: 'User', required: true, index: true },
     url: { type: String, trim: true, default: '' },
+    fileName: { type: String, trim: true, default: '' },
     note: { type: String, trim: true, default: '' },
     submittedAt: { type: Date, default: Date.now },
     score: { type: Number },

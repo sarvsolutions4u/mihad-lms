@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Icon from './Icon';
@@ -9,6 +9,7 @@ import { useSession, roleLabel } from './SessionProvider';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard', roles: ['admin', 'teacher', 'student', 'parent'] },
+  { href: '/subjects', label: 'My Subjects', adminLabel: 'Subjects', icon: 'book', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/timetable', label: 'Timetable', icon: 'calendar', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/attendance', label: 'Attendance', icon: 'check', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/lesson-plans', label: 'Lesson Plans', icon: 'plan', roles: ['admin', 'teacher', 'student', 'parent'] },
@@ -29,6 +30,16 @@ export default function Shell({ children }) {
   const [open, setOpen] = useState(false);
 
   const items = NAV.filter((n) => !user || n.roles.includes(user.role));
+
+  // fee alerts badge for the office
+  const [feeAlerts, setFeeAlerts] = useState(0);
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+    fetch('/api/alerts')
+      .then((r) => r.json())
+      .then((d) => setFeeAlerts(d?.ok ? d.count : 0))
+      .catch(() => {});
+  }, [user?.role, pathname]);
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -58,7 +69,15 @@ export default function Shell({ children }) {
                 }`}
               >
                 <Icon name={item.icon} />
-                {item.label}
+                {user?.role === 'admin' && item.adminLabel ? item.adminLabel : item.label}
+                {item.href === '/fees' && feeAlerts > 0 && (
+                  <span
+                    className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white"
+                    title={`${feeAlerts} fee${feeAlerts === 1 ? '' : 's'} overdue or due this week`}
+                  >
+                    {feeAlerts}
+                  </span>
+                )}
               </Link>
             </li>
           );

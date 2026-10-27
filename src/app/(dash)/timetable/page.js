@@ -1,10 +1,12 @@
 'use client';
 
+import { normalizeUrl } from '@/lib/links';
+
 import { useEffect, useMemo, useState } from 'react';
 import { list, create, update, remove } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import { useLookups } from '@/lib/useLookups';
-import { PageHeader, Card, Modal, Field, Select, Alert, Spinner, Confirm, Empty } from '@/components/ui';
+import { PageHeader, Card, Modal, Field, Select, Alert, Spinner, Confirm, Empty, JoinButton } from '@/components/ui';
 import Icon from '@/components/Icon';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -106,10 +108,7 @@ export default function TimetablePage() {
             <p className="text-xs font-bold uppercase tracking-wide text-gold-600">Fixed online class link</p>
             <p className="text-sm text-maroon">{currentClass.name} — the same link every session, no confusion.</p>
           </div>
-          <a href={currentClass.onlineClassLink} target="_blank" rel="noreferrer" className="btn-primary btn-sm">
-            <Icon name="link" className="h-3.5 w-3.5" />
-            Join class
-          </a>
+          <JoinButton url={currentClass.onlineClassLink} />
         </div>
       )}
 
@@ -129,7 +128,7 @@ export default function TimetablePage() {
               {byDay[day]?.length ? (
                 <ul className="divide-y divide-slate-100">
                   {byDay[day].map((s) => {
-                    const link = s.onlineClassLink || s.subject?.onlineClassLink || currentClass?.onlineClassLink;
+                    const link = normalizeUrl(s.onlineClassLink || s.subject?.onlineClassLink || currentClass?.onlineClassLink);
                     return (
                       <li key={s._id} className="px-5 py-3">
                         <div className="flex items-start justify-between gap-3">
@@ -143,9 +142,7 @@ export default function TimetablePage() {
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
                             {link && (
-                              <a href={link} target="_blank" rel="noreferrer" className="btn-ghost btn-sm" title="Join online class">
-                                <Icon name="link" className="h-3.5 w-3.5" />
-                              </a>
+                              <JoinButton url={link} label="Join" />
                             )}
                             {isAdmin && (
                               <>

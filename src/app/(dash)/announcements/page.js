@@ -5,8 +5,7 @@ import { list, create, update, remove, fmtDate } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import { useLookups } from '@/lib/useLookups';
 import {
-  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, FileOrLink,
-} from '@/components/ui';
+  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, FileOrLink, FileLink } from '@/components/ui';
 
 const AUDIENCES = [
   { value: 'all', label: 'Everyone' },
@@ -141,9 +140,7 @@ export default function AnnouncementsPage() {
               {!!a.attachments?.length && (
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3.5">
                   {a.attachments.map((at, i) => (
-                    <a key={i} href={at.url} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
-                      {at.name || at.type}
-                    </a>
+                    <FileLink key={i} url={at.url} name={at.name || at.type} />
                   ))}
                 </div>
               )}

@@ -18,11 +18,17 @@ export const maxDuration = 60;
  */
 export async function POST(req) {
   try {
-    await requireSession(['admin', 'teacher']);
+    const session = await requireSession(['admin', 'teacher']);
     const form = await req.formData();
     const file = form.get('file');
     const classRoomId = form.get('classRoom');
     const defaultPassword = (form.get('defaultPassword') || 'Student@123').toString();
+    const subjectIds =
+      session.role === 'admin'
+        ? String(form.get('subjects') || '')
+            .split(',')
+            .filter((v) => /^[a-f0-9]{24}$/i.test(v))
+        : [];
 
     if (!file || typeof file === 'string') return fail('Please choose an .xlsx or .csv file', 422);
     if (!classRoomId) return fail('Please choose a class', 422);
@@ -64,6 +70,7 @@ export async function POST(req) {
         passwordHash: pwd ? await hashPassword(pwd) : fallbackHash,
         role: 'student',
         classRoom: classRoomId,
+        subjects: subjectIds,
         admissionNo: pick(row, 'admissionno', 'admno', 'rollno', 'rollnumber'),
         phone: pick(row, 'phone', 'mobile', 'contact', 'phonenumber'),
       });

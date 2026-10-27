@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import SubjectPicker from '@/components/SubjectPicker';
 import { list, create, update, remove } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import {
@@ -93,17 +95,33 @@ export default function PeoplePage() {
     {
       key: 'name',
       header: 'Name',
-      render: (r) => (
-        <div>
-          <p className="font-semibold text-slate-800">{r.name}</p>
-          <p className="text-xs text-slate-500">{r.email}</p>
-        </div>
-      ),
+      render: (r) =>
+        r.role === 'student' ? (
+          <Link href={`/students/${r._id}`} className="group block">
+            <p className="font-semibold text-slate-800 group-hover:text-maroon group-hover:underline">{r.name}</p>
+            <p className="text-xs text-slate-500">{r.email}</p>
+          </Link>
+        ) : (
+          <div>
+            <p className="font-semibold text-slate-800">{r.name}</p>
+            <p className="text-xs text-slate-500">{r.email}</p>
+          </div>
+        ),
     },
     ...(tab === 'student'
       ? [
           { key: 'admissionNo', header: 'Admission no', render: (r) => r.admissionNo || '—' },
-          { key: 'classRoom', header: 'Class', render: (r) => r.classRoom?.name || <Badge tone="amber">No class</Badge> },
+          { key: 'classRoom', header: 'Batch', render: (r) => r.classRoom?.name || <Badge tone="amber">No batch</Badge> },
+          {
+            key: 'subjects',
+            header: 'Subjects',
+            render: (r) =>
+              r.subjects?.length ? (
+                <span className="text-xs text-slate-600">{r.subjects.map((s) => s.name).join(', ')}</span>
+              ) : (
+                <Badge>Whole batch</Badge>
+              ),
+          },
         ]
       : []),
     ...(tab === 'parent'
@@ -145,12 +163,25 @@ export default function PeoplePage() {
           >
             Edit
           </button>
+          {r.role === 'student' && (
+            <Link href={`/students/${r._id}`} className="btn-ghost btn-sm">
+              Details
+            </Link>
+          )}
           {isAdmin && (
             <button
               className="btn-danger btn-sm"
-              onClick={() => setConfirm({ message: `Delete ${r.name}'s account?`, run: () => remove('users', r._id) })}
+              onClick={() =>
+                setConfirm({
+                  message:
+                    r.role === 'student'
+                      ? `Remove ${r.name}? Their account, attendance, marks, submitted work and fee records will be deleted permanently. To keep the records, set the account to Disabled instead.`
+                      : `Delete ${r.name}'s account?`,
+                  run: () => remove('users', r._id),
+                })
+              }
             >
-              Delete
+              {r.role === 'student' ? 'Remove' : 'Delete'}
             </button>
           )}
         </div>
@@ -311,6 +342,18 @@ export default function PeoplePage() {
               </div>
             )}
 
+            {form.role === 'student' && isAdmin && (
+              <div className="rounded-lg border border-slate-200 p-4">
+                <span className="label">Subjects</span>
+                <SubjectPicker
+                  subjects={subjects}
+                  value={(form.subjects || []).map(String)}
+                  onChange={(v) => setForm({ ...form, subjects: v })}
+                  homeClassId={form.classRoom}
+                />
+              </div>
+            )}
+
             {form.role === 'parent' && (
               <Field label="Children" hint="Hold Ctrl / Cmd to select more than one.">
                 <select
@@ -346,6 +389,7 @@ export default function PeoplePage() {
         state={bulk}
         setState={setBulk}
         classes={classes}
+        subjects={isAdmin ? subjects : []}
         onDone={(msg) => {
           setNotice(msg);
           load();
@@ -374,7 +418,7 @@ export default function PeoplePage() {
 
 /* ------------------------------------------------------------------ */
 
-function BulkUploadModal({ state, setState, classes, onDone, onError }) {
+function BulkUploadModal({ state, setState, classes, subjects, onDone, onError }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
 
@@ -388,6 +432,7 @@ function BulkUploadModal({ state, setState, classes, onDone, onError }) {
       fd.append('file', state.file);
       fd.append('classRoom', state.classRoom);
       fd.append('defaultPassword', state.defaultPassword);
+      if (state.subjects?.length) fd.append('subjects', state.subjects.join(','));
       const res = await fetch('/api/users/bulk-upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok || data.ok === false) throw new Error(data.error || 'Upload failed');
@@ -447,6 +492,18 @@ function BulkUploadModal({ state, setState, classes, onDone, onError }) {
               />
             </Field>
           </div>
+
+          {!!subjects.length && state.classRoom && (
+            <div className="rounded-lg border border-slate-200 p-4">
+              <span className="label">Enrol the imported students in</span>
+              <SubjectPicker
+                subjects={subjects}
+                value={state.subjects || []}
+                onChange={(v) => setState({ ...state, subjects: v })}
+                homeClassId={state.classRoom}
+              />
+            </div>
+          )}
 
           <Field label="Excel or CSV file">
             <input

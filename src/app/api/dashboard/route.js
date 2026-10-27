@@ -6,6 +6,7 @@ import {
 import { requireSession } from '@/lib/auth';
 import { getActorContext, POLICY } from '@/lib/access';
 import { ok, handleError, todayISO, weekStart } from '@/lib/api';
+import { refreshOverdueFees } from '@/lib/fees';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +31,8 @@ export async function GET() {
 
     /* ---- today's timetable ---------------------------------------- */
     const ttFilter = { day: dayName };
-    if (session.role !== 'admin') ttFilter.classRoom = { $in: ctx.classIds };
-    if (session.role === 'teacher') {
-      delete ttFilter.classRoom;
-      ttFilter.$or = [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }];
-    }
+    if (session.role === 'teacher') ttFilter.$or = [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }];
+    else if (session.role !== 'admin') ttFilter.subject = { $in: ctx.subjectIds };
     out.sections.todayClasses = await TimetableSlot.find(ttFilter)
       .sort('startTime')
       .populate('subject', 'name onlineClassLink')
@@ -44,6 +42,7 @@ export async function GET() {
 
     /* ---- role-specific numbers ------------------------------------ */
     if (session.role === 'admin') {
+      await refreshOverdueFees(today);
       const [students, teachers, parents, classes, subjects, presentToday, totalToday, feesDue] =
         await Promise.all([
           User.countDocuments({ role: 'student', active: true }),
@@ -81,7 +80,7 @@ export async function GET() {
     if (session.role === 'teacher') {
       const [mySubjects, myStudents, plans, pending] = await Promise.all([
         Subject.countDocuments({ teacher: ctx.uid }),
-        User.countDocuments({ role: 'student', classRoom: { $in: ctx.classIds } }),
+        Promise.resolve(ctx.studentIds.length),
         LessonPlan.find({ teacher: ctx.uid, weekOf: monday })
           .populate('subject', 'name')
           .populate('classRoom', 'name')
@@ -108,7 +107,7 @@ export async function GET() {
       const [present, total, upcoming, recentMarks, plans] = await Promise.all([
         Attendance.countDocuments({ student: { $in: studentIds }, status: { $in: ['present', 'late'] } }),
         Attendance.countDocuments({ student: { $in: studentIds } }),
-        Task.find({ classRoom: { $in: ctx.classIds }, deadline: { $gte: today } })
+        Task.find({ subject: { $in: ctx.subjectIds }, deadline: { $gte: today } })
           .sort('deadline')
           .limit(5)
           .populate('subject', 'name')
@@ -119,7 +118,7 @@ export async function GET() {
           .populate('subject', 'name')
           .populate('student', 'name')
           .lean(),
-        LessonPlan.find({ classRoom: { $in: ctx.classIds }, weekOf: monday })
+        LessonPlan.find({ subject: { $in: ctx.subjectIds }, weekOf: monday })
           .populate('subject', 'name')
           .populate('teacher', 'name')
           .lean(),
@@ -135,7 +134,7 @@ export async function GET() {
         },
         { label: 'Portions done this week', value: `${completed}/${plans.length}` },
         { label: 'Upcoming deadlines', value: upcoming.length },
-        { label: 'Resources', value: await Resource.countDocuments({ classRoom: { $in: ctx.classIds } }) },
+        { label: 'Resources', value: await Resource.countDocuments(POLICY.resources.scope(ctx)) },
       ];
 
       out.sections.weekPlans = plans;

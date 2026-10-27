@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, list, create, update, remove, fmtDate, todayISO, weekStartISO } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import { useLookups } from '@/lib/useLookups';
+import Link from 'next/link';
 import {
-  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, Table,
+  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, Table, FileList, FileLink,
 } from '@/components/ui';
 
 const addDays = (iso, n) => {
@@ -16,7 +17,7 @@ const addDays = (iso, n) => {
 
 const blank = (weekOf) => ({
   classRoom: '', subject: '', weekOf, title: '', portion: '', plannedDate: '',
-  examTitle: '', examDate: '', maxMarks: 0, teacherRemark: '',
+  examTitle: '', examDate: '', maxMarks: 0, teacherRemark: '', attachments: [],
 });
 
 export default function LessonPlansPage() {
@@ -26,6 +27,12 @@ export default function LessonPlansPage() {
 
   const [weekOf, setWeekOf] = useState(weekStartISO(todayISO()));
   const [classId, setClassId] = useState('');
+  const [subjectId, setSubjectId] = useState('');
+
+  useEffect(() => {
+    const sid = new URLSearchParams(window.location.search).get('subject');
+    if (sid) setSubjectId(sid);
+  }, []);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,6 +47,7 @@ export default function LessonPlansPage() {
       const r = await list('lessonplans', {
         weekOf,
         classRoom: classId || undefined,
+        subject: subjectId || undefined,
         sort: 'plannedDate title',
         limit: 300,
       });
@@ -55,7 +63,7 @@ export default function LessonPlansPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekOf, classId]);
+  }, [weekOf, classId, subjectId]);
 
   const progress = useMemo(() => {
     const total = plans.length;
@@ -97,12 +105,30 @@ export default function LessonPlansPage() {
       >
         <Select
           value={classId}
-          onChange={(e) => setClassId(e.target.value)}
+          onChange={(e) => {
+            setClassId(e.target.value);
+            setSubjectId('');
+          }}
           options={classes.map((c) => ({ value: c._id, label: c.name }))}
           placeholder="All classes"
         />
+        <Select
+          value={subjectId}
+          onChange={(e) => setSubjectId(e.target.value)}
+          options={subjects
+            .filter((s) => !classId || String(s.classRoom?._id || s.classRoom) === String(classId))
+            .filter((s) => user?.role !== 'teacher' || String(s.teacher?._id || s.teacher) === String(user?._id || user?.id))
+            .map((s) => ({ value: s._id, label: `${s.name}${classId ? '' : ` — ${s.classRoom?.name || ''}`}` }))}
+          placeholder="All subjects"
+        />
         {canEdit && (
-          <button className="btn-primary" onClick={() => setForm(blank(weekOf))}>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              const subj = subjects.find((s) => s._id === subjectId);
+              setForm({ ...blank(weekOf), classRoom: classId || subj?.classRoom?._id || subj?.classRoom || '', subject: subjectId });
+            }}
+          >
             Add plan
           </button>
         )}
@@ -156,7 +182,13 @@ export default function LessonPlansPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-bold text-maroon">{p.title}</h3>
-                    <Badge tone="maroon">{p.subject?.name}</Badge>
+                    {p.subject?._id ? (
+                      <Link href={`/subjects/${p.subject._id}`} className="chip bg-maroon-50 text-maroon hover:underline">
+                        {p.subject.name}
+                      </Link>
+                    ) : (
+                      <Badge tone="maroon">{p.subject?.name}</Badge>
+                    )}
                     <Badge>{p.classRoom?.name}</Badge>
                     {p.plannedDate && <Badge tone="slate">{fmtDate(p.plannedDate)}</Badge>}
                   </div>
@@ -167,6 +199,13 @@ export default function LessonPlansPage() {
                   </p>
                   {p.teacherRemark && (
                     <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{p.teacherRemark}</p>
+                  )}
+                  {!!p.attachments?.length && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {p.attachments.map((a, i) => (
+                        <FileLink key={i} url={a.url} name={a.name} size={a.size} />
+                      ))}
+                    </div>
                   )}
                 </div>
 
@@ -205,6 +244,7 @@ export default function LessonPlansPage() {
                               ...p,
                               classRoom: p.classRoom?._id || p.classRoom,
                               subject: p.subject?._id || p.subject,
+                              attachments: p.attachments || [],
                             })
                           }
                         >
@@ -344,6 +384,12 @@ export default function LessonPlansPage() {
                 onChange={(e) => setForm({ ...form, teacherRemark: e.target.value })}
               />
             </Field>
+
+            <FileList
+              name="Plan documents, notes or slides (optional)"
+              value={form.attachments || []}
+              onChange={(attachments) => setForm({ ...form, attachments })}
+            />
           </form>
         )}
       </Modal>
@@ -404,9 +450,8 @@ function MarksModal({ plan, canEdit, onClose, onSaved, onError }) {
   useEffect(() => {
     if (!plan) return;
     setLoading(true);
-    const classId = plan.classRoom?._id || plan.classRoom;
     Promise.all([
-      list('users', { role: 'student', classRoom: classId, sort: 'name', limit: 500 }),
+      list('users', { role: 'student', enrolledIn: plan.subject?._id || plan.subject, sort: 'name', limit: 1000 }),
       list('marks', { lessonPlan: plan._id, limit: 500 }),
     ])
       .then(([s, m]) => {

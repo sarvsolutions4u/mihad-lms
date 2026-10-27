@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useState } from 'react';
 import { list, create, update, remove } from '@/lib/client';
-import { PageHeader, Card, Table, Modal, Field, Select, Badge, Alert, Spinner, Confirm, Empty } from '@/components/ui';
+import { PageHeader, Card, Table, Modal, Field, Select, Badge, Alert, Spinner, Confirm, Empty, JoinButton } from '@/components/ui';
 
 const blankClass = { name: '', academicYear: '', onlineClassLink: '', description: '', order: 0 };
 const blankSubject = { name: '', code: '', classRoom: '', teacher: '', onlineClassLink: '' };
@@ -132,14 +134,7 @@ export default function ClassesPage() {
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500">
                   {c.academicYear && <span>Academic year: {c.academicYear}</span>}
                   {c.onlineClassLink ? (
-                    <a
-                      href={c.onlineClassLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-maroon hover:text-gold-600"
-                    >
-                      Fixed class link ↗
-                    </a>
+                    <JoinButton url={c.onlineClassLink} label="Open class link" />
                   ) : (
                     <span className="text-amber-600">No online class link set</span>
                   )}
@@ -149,7 +144,15 @@ export default function ClassesPage() {
                 <div className="px-5 py-4">
                   <Table
                     columns={[
-                      { key: 'name', header: 'Subject', render: (r) => <span className="font-medium text-slate-800">{r.name}</span> },
+                      {
+                        key: 'name',
+                        header: 'Subject',
+                        render: (r) => (
+                          <Link href={`/subjects/${r._id}`} className="font-medium text-slate-800 hover:text-maroon hover:underline">
+                            {r.name}
+                          </Link>
+                        ),
+                      },
                       { key: 'code', header: 'Code', render: (r) => r.code || '—' },
                       {
                         key: 'teacher',
@@ -162,6 +165,10 @@ export default function ClassesPage() {
                         align: 'right',
                         render: (r) => (
                           <div className="flex justify-end gap-2">
+                            {r.onlineClassLink && <JoinButton url={r.onlineClassLink} label="Link" />}
+                            <Link href={`/subjects/${r._id}`} className="btn-ghost btn-sm">
+                              Open
+                            </Link>
                             <button className="btn-ghost btn-sm" onClick={() => setSubjectForm({ ...r, classRoom: c._id, teacher: r.teacher?._id || '' })}>
                               Edit
                             </button>

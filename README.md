@@ -11,13 +11,11 @@ copy and demo data differ, so fixes made in one codebase can be copied straight 
 | Code | **GitHub** | Unlimited private repositories |
 | Hosting | **Vercel** (Hobby) | 100 GB bandwidth/month, unlimited deployments, free HTTPS |
 | Database | **MongoDB Atlas M0** | 512 MB storage, shared cluster, no credit card |
-| File storage *(optional)* | **Cloudinary** | 25 GB storage + 25 GB bandwidth/month |
 
 **Yes — MongoDB works.** The whole system is built on MongoDB with Mongoose, and the
 Atlas free tier is enough for several thousand students, years of attendance and marks.
-512 MB only becomes a problem if you store the *files themselves* in the database — so
-this app never does. Files go to Cloudinary, or you simply paste a Google Drive /
-OneDrive / YouTube link, which costs nothing at all.
+Uploaded files (notes, papers, receipts) are kept in the same database, capped at 4 MB each —
+roughly 1,000+ typical PDFs fit comfortably. For videos, paste a YouTube / Drive link instead.
 
 ---
 
@@ -26,16 +24,44 @@ OneDrive / YouTube link, which costs nothing at all.
 | | Admin | Teacher | Student | Parent |
 |---|---|---|---|---|
 | Create accounts | everyone | students only | — | — |
-| Classes, subjects, online class links | create & edit | view | view | view |
-| Timetable | create & edit | view | view | view |
-| Attendance | mark & edit | view class | view own | view child's |
-| Lesson plans + tick boxes | full | own subjects | view | view |
+| Enrol a student in subjects | yes | — | — | — |
+| Subject page (students, attendance, plans, work) | every subject | own subjects | enrolled subjects (own progress) | children's subjects |
+| Student page (attendance, marks, work, parents) | everyone | students in own subjects | self | own children (+ fees) |
+| Attendance | mark any subject or a whole-day register | mark own subjects | view own | view child's |
+| Lesson plans + tick boxes + files | full | own subjects | view & download | view & download |
 | Marks | full | own subjects | view own | view child's |
-| Assignments, worksheets, resources | full | own subjects | view & submit | view |
-| Fee details | full | — | — | **view only (parents)** |
+| Assignments, worksheets | full | own subjects, see & grade submissions | view, upload work | view |
+| Notes, question papers, resources | full | own subjects | enrolled subjects | view |
+| Fees, payments, receipts | full + overdue alerts | — | — | **view & download receipts** |
+| Remove a student | yes | — | — | — |
 | Announcements | post to any audience | receive | receive | receive |
 
-Fees are deliberately invisible to teachers and students — exactly as specified.
+### Subject enrolment
+
+A student with **no subjects chosen** is enrolled in every subject of their batch. Once the office
+picks subjects (People → Edit, the student's page → *Change subjects*, or during bulk upload), the
+student and their parent see **only those subjects** — their plans, assignments, notes, papers and
+timetable — and each subject's teacher sees only the students enrolled in it.
+
+### Files (uploads and downloads)
+
+Files are stored inside the same MongoDB database (GridFS) — nothing else to set up. Limits:
+**4 MB per file** (a Vercel limit); PDF, Word, Excel, PowerPoint, images, audio, MP4 and ZIP. For long
+videos or larger files, paste a YouTube / Google Drive link instead. Every download goes through
+`/api/files/<id>` and needs a signed-in user; fee receipts open only for admins and that student's
+parents. PDFs and images open in the browser; everything else downloads.
+
+### Fee alerts
+
+Unpaid fees past their due date turn **overdue** automatically. Admins see a red count on *Fees* in
+the menu, an alert card on the dashboard, and an alert bar on the Fees page listing overdue fees and
+anything due in the next 7 days.
+
+### Online class links
+
+Type links as they come (`zoom.us/j/…`, `meet.google.com/…`, a Teams link) — they are cleaned up to
+open in a new tab, which then hands over to the Zoom / Meet / Teams app. A subject's own link takes
+priority over the batch link.
 
 ---
 
@@ -102,7 +128,6 @@ git push -u origin main
 3. Before clicking Deploy, open **Environment Variables** and add:
    - `MONGODB_URI` — the Atlas string from step 1
    - `AUTH_SECRET` — the long random string
-   - *(optional)* the three `CLOUDINARY_*` keys
 4. **Deploy.** You get a live HTTPS address such as `mihad-lms.vercel.app`.
 
 Every later `git push` redeploys automatically.
@@ -183,7 +208,10 @@ src/
       marks/bulk          enter a whole class's marks at once
       users/bulk-upload   Excel import
       users/template      download the Excel template
-      upload/             Cloudinary upload (optional)
+      upload/             file upload (stored in MongoDB GridFS)
+      files/[id]/         access-checked download
+      subjects/ students/ subject and student pages
+      alerts/             fee alerts for the office
       dashboard/          role-aware summary
       report/[studentId]/ the progress report
   components/             UI kit, app shell, session provider
@@ -210,7 +238,7 @@ the URL by hand.
 - **Vercel Hobby** — fine for a training centre's traffic. It is for non-commercial use;
   if Vercel ever asks you to move to a paid plan, the same code runs unchanged on
   Render, Netlify or Railway.
-- **Cloudinary** — only needed if you want files hosted by the app. Pasting Drive or
-  YouTube links keeps you at zero forever.
+- **Files** — keep uploads to PDFs and documents; link videos from YouTube / Drive. Atlas → your
+  cluster → *Collections* → `uploads.files` shows what is stored.
 - Connections are pooled and cached (`src/lib/db.js`) so the serverless functions never
   exhaust the Atlas connection limit.

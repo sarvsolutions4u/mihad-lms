@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { dbConnect } from '@/lib/db';
-import { MODELS } from '@/models';
+import { MODELS, Subject } from '@/models';
+import { enrolledStudentsFilter } from '@/lib/enrol';
+import { cleanLinks } from '@/lib/links';
 import { requireSession, hashPassword } from '@/lib/auth';
 import { getActorContext, POLICY, POPULATE, stripProtected, selectFor } from '@/lib/access';
 import { ok, fail, handleError } from '@/lib/api';
@@ -15,7 +17,7 @@ function buildQuery(Model, searchParams) {
   const paths = Model.schema.paths;
 
   for (const [key, raw] of searchParams.entries()) {
-    if (['limit', 'skip', 'sort', 'q', 'page', 'populate'].includes(key)) continue;
+    if (['limit', 'skip', 'sort', 'q', 'page', 'populate', 'enrolledIn'].includes(key)) continue;
     if (!paths[key]) continue;
 
     const instance = paths[key].instance;
@@ -78,7 +80,16 @@ export async function GET(req, ctxParams) {
     const ctx = await getActorContext(session);
 
     const { searchParams } = new URL(req.url);
-    const filter = mergeFilters(buildQuery(Model, searchParams), policy.scope(ctx));
+    let filter = mergeFilters(buildQuery(Model, searchParams), policy.scope(ctx));
+
+    // ?enrolledIn=<subjectId> — the students enrolled in a subject
+    const enrolledIn = searchParams.get('enrolledIn');
+    if (key === 'users' && enrolledIn) {
+      const subjects = await Subject.find({ _id: { $in: enrolledIn.split(',').filter(isId) } })
+        .select('_id classRoom')
+        .lean();
+      filter = mergeFilters(filter, enrolledStudentsFilter(subjects));
+    }
 
     const limit = Math.min(Number(searchParams.get('limit')) || 200, 1000);
     const skip = Number(searchParams.get('skip')) || 0;
@@ -87,7 +98,7 @@ export async function GET(req, ctxParams) {
     let query = Model.find(filter).sort(sort).skip(skip).limit(limit);
     const sel = selectFor(key);
     if (sel) query = query.select(sel);
-    for (const p of POPULATE[key] || []) query = query.populate(p, 'name email role title amount classRoom subject deadline');
+    for (const p of POPULATE[key] || []) query = query.populate(p, 'name email role title amount classRoom subject deadline onlineClassLink teacher type maxMarks');
 
     const [items, total] = await Promise.all([query.lean(), Model.countDocuments(filter)]);
     return ok({ items, total });
@@ -109,7 +120,7 @@ export async function POST(req, ctxParams) {
 
     await dbConnect();
     const ctx = await getActorContext(session);
-    const body = stripProtected(await req.json());
+    const body = cleanLinks(key, stripProtected(await req.json()));
 
     /* --- collection-specific guards ------------------------------- */
 
@@ -122,6 +133,11 @@ export async function POST(req, ctxParams) {
       body.passwordHash = await hashPassword(body.password);
       delete body.password;
       if (body.email) body.email = String(body.email).toLowerCase().trim();
+      // a teacher can only enrol a new student into their own subjects
+      if (session.role === 'teacher' && Array.isArray(body.subjects)) {
+        body.subjects = body.subjects.filter((id) => ctx.subjectIds.includes(String(id)));
+      }
+      if (body.role !== 'student') delete body.classRoom;
     }
 
     if (key === 'lessonplans') {
@@ -140,6 +156,9 @@ export async function POST(req, ctxParams) {
     }
 
     if (key === 'submissions' && session.role === 'student') body.student = ctx.uid;
+    if (key === 'fees' && Array.isArray(body.payments)) {
+      body.payments = body.payments.map((p) => ({ ...p, recordedBy: ctx.uid, recordedAt: new Date() }));
+    }
 
     // stamp the author where the schema has a slot for it
     if (Model.schema.paths.createdBy && !body.createdBy) body.createdBy = ctx.uid;

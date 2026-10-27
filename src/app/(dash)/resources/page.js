@@ -5,15 +5,16 @@ import { list, create, update, remove, fmtDate } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import { useLookups } from '@/lib/useLookups';
 import {
-  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, FileOrLink,
+  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, FileOrLink, FileLink,
 } from '@/components/ui';
-import Icon from '@/components/Icon';
+import Link from 'next/link';
 
 const TYPES = [
   { value: 'note', label: 'Notes' },
   { value: 'pdf', label: 'PDF' },
   { value: 'doc', label: 'Document' },
   { value: 'ppt', label: 'Presentation' },
+  { value: 'paper', label: 'Question paper' },
   { value: 'video', label: 'Video' },
   { value: 'link', label: 'Link' },
   { value: 'image', label: 'Image' },
@@ -36,6 +37,24 @@ export default function ResourcesPage() {
   const [notice, setNotice] = useState('');
   const [form, setForm] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [fromUrl, setFromUrl] = useState(null);
+
+  // /resources?subject=<id>&new=1 — opened from a subject page
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    setFromUrl({ subject: p.get('subject') || '', isNew: p.get('new') === '1' });
+  }, []);
+
+  useEffect(() => {
+    if (!fromUrl || lookLoading || !fromUrl.subject) return;
+    const subj = subjects.find((s) => s._id === fromUrl.subject);
+    const cls = subj?.classRoom?._id || subj?.classRoom || '';
+    setClassId(cls);
+    setSubjectId(fromUrl.subject);
+    if (fromUrl.isNew && canEdit) setForm({ ...blank, classRoom: cls, subject: fromUrl.subject });
+    setFromUrl({ subject: '' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromUrl, lookLoading]);
 
   async function load() {
     setLoading(true);
@@ -85,7 +104,7 @@ export default function ResourcesPage() {
         subtitle="Notes, PDFs, documents, presentations, videos and links — organised by subject."
       >
         {canEdit && (
-          <button className="btn-primary" onClick={() => setForm({ ...blank, classRoom: classId })}>
+          <button className="btn-primary" onClick={() => setForm({ ...blank, classRoom: classId, subject: subjectId })}>
             Add resource
           </button>
         )}
@@ -137,7 +156,11 @@ export default function ResourcesPage() {
             <Card key={r._id} bodyClass="p-5">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <Badge tone="maroon">{TYPES.find((t) => t.value === r.type)?.label || r.type}</Badge>
-                {r.subject?.name && <Badge>{r.subject.name}</Badge>}
+                {r.subject?._id && (
+                  <Link href={`/subjects/${r.subject._id}`} className="chip bg-slate-100 text-slate-700 hover:bg-maroon-50 hover:text-maroon">
+                    {r.subject.name}
+                  </Link>
+                )}
                 {r.classRoom?.name && <Badge>{r.classRoom.name}</Badge>}
               </div>
               <h3 className="text-sm font-bold text-maroon">{r.title}</h3>
@@ -148,12 +171,7 @@ export default function ResourcesPage() {
               </p>
 
               <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3.5">
-                {r.url && (
-                  <a href={r.url} target="_blank" rel="noreferrer" className="btn-gold btn-sm">
-                    <Icon name="link" className="h-3.5 w-3.5" />
-                    Open
-                  </a>
-                )}
+                {r.url && <FileLink url={r.url} name={r.fileName || (TYPES.find((t) => t.value === r.type)?.label || 'Open')} />}
                 {canEdit && (
                   <div className="ml-auto flex gap-2">
                     <button
@@ -240,8 +258,9 @@ export default function ResourcesPage() {
 
             <FileOrLink
               name="File or link"
+              fileName={form.fileName}
               value={form.url}
-              onChange={(url, fileName) => setForm({ ...form, url, fileName: fileName || form.fileName })}
+              onChange={(url, fileName) => setForm({ ...form, url, fileName: fileName || '' })}
             />
           </form>
         )}

@@ -1,17 +1,23 @@
 import { User, Subject } from '@/models';
+import { enrolledStudentsFilter, subjectIdsForStudent } from '@/lib/enrol';
 
 /**
  * Resolve everything we need to scope queries for the signed-in person:
  *   admin   -> sees everything
- *   teacher -> the subjects assigned to them, and those subjects' classes
- *   student -> their own class + their own record
- *   parent  -> their children, and their children's classes
+ *   teacher -> the subjects assigned to them, their classes, and the students
+ *              enrolled in those subjects
+ *   student -> only the subjects they are enrolled in (+ their own record)
+ *   parent  -> their children, and the subjects their children are enrolled in
+ *
+ *   classIds     classes the person can see anything in
+ *   homeClassIds the student's own class(es) — for class-wide resources
  */
 export async function getActorContext(session) {
   const ctx = {
     uid: String(session.uid),
     role: session.role,
     classIds: [],
+    homeClassIds: [],
     subjectIds: [],
     studentIds: [],
   };
@@ -22,34 +28,42 @@ export async function getActorContext(session) {
     const subjects = await Subject.find({ teacher: ctx.uid }).select('_id classRoom').lean();
     ctx.subjectIds = subjects.map((s) => String(s._id));
     ctx.classIds = [...new Set(subjects.map((s) => String(s.classRoom)).filter(Boolean))];
-    const students = await User.find({ role: 'student', classRoom: { $in: ctx.classIds } })
-      .select('_id')
-      .lean();
-    ctx.studentIds = students.map((s) => String(s._id));
+    if (subjects.length) {
+      const students = await User.find(enrolledStudentsFilter(subjects)).select('_id').lean();
+      ctx.studentIds = students.map((s) => String(s._id));
+    }
     return ctx;
   }
 
+  let learners = [];
   if (session.role === 'student') {
-    const me = await User.findById(ctx.uid).select('classRoom').lean();
+    const me = await User.findById(ctx.uid).select('classRoom subjects').lean();
+    learners = me ? [me] : [];
     ctx.studentIds = [ctx.uid];
-    if (me?.classRoom) ctx.classIds = [String(me.classRoom)];
-    const subjects = await Subject.find({ classRoom: { $in: ctx.classIds } }).select('_id').lean();
-    ctx.subjectIds = subjects.map((s) => String(s._id));
-    return ctx;
-  }
-
-  if (session.role === 'parent') {
+  } else if (session.role === 'parent') {
     const me = await User.findById(ctx.uid).select('children').lean();
     ctx.studentIds = (me?.children || []).map(String);
-    const kids = await User.find({ _id: { $in: ctx.studentIds } }).select('classRoom').lean();
-    ctx.classIds = [...new Set(kids.map((k) => String(k.classRoom)).filter(Boolean))];
-    const subjects = await Subject.find({ classRoom: { $in: ctx.classIds } }).select('_id').lean();
-    ctx.subjectIds = subjects.map((s) => String(s._id));
-    return ctx;
+    learners = await User.find({ _id: { $in: ctx.studentIds } }).select('classRoom subjects').lean();
   }
 
+  const subjectIds = new Set();
+  for (const l of learners) (await subjectIdsForStudent(l)).forEach((id) => subjectIds.add(id));
+  ctx.subjectIds = [...subjectIds];
+  ctx.homeClassIds = [...new Set(learners.map((l) => String(l.classRoom || '')).filter(Boolean))];
+  const subjectClasses = ctx.subjectIds.length
+    ? await Subject.find({ _id: { $in: ctx.subjectIds } }).select('classRoom').lean()
+    : [];
+  ctx.classIds = [...new Set([...ctx.homeClassIds, ...subjectClasses.map((s) => String(s.classRoom))])];
   return ctx;
 }
+
+/** For learners: items tied to an enrolled subject, or class-wide items of their own class. */
+const learnerSubjectScope = (ctx) => ({
+  $or: [
+    { subject: { $in: ctx.subjectIds } },
+    { subject: null, classRoom: { $in: ctx.homeClassIds } },
+  ],
+});
 
 const ALL = ['admin', 'teacher', 'student', 'parent'];
 
@@ -72,7 +86,7 @@ export const POLICY = {
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
       if (ctx.role === 'teacher') return { $or: [{ teacher: ctx.uid }, { classRoom: { $in: ctx.classIds } }] };
-      return { classRoom: { $in: ctx.classIds } };
+      return { _id: { $in: ctx.subjectIds } };
     },
   },
 
@@ -83,7 +97,7 @@ export const POLICY = {
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
       if (ctx.role === 'teacher') {
-        return { $or: [{ _id: ctx.uid }, { role: 'student', classRoom: { $in: ctx.classIds } }, { role: 'teacher' }] };
+        return { $or: [{ _id: ctx.uid }, { _id: { $in: ctx.studentIds } }, { role: 'teacher' }] };
       }
       if (ctx.role === 'student') return { _id: ctx.uid };
       // parent: self + own children
@@ -93,16 +107,20 @@ export const POLICY = {
 
   timetable: {
     read: ALL,
-    write: ['admin'], // "Class time table, attendance ... will be updated by admin"
-    scope: (ctx) => (ctx.role === 'admin' ? {} : { classRoom: { $in: ctx.classIds } }),
-  },
-
-  attendance: {
-    read: ALL,
     write: ['admin'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
       if (ctx.role === 'teacher') return { classRoom: { $in: ctx.classIds } };
+      return { subject: { $in: ctx.subjectIds } };
+    },
+  },
+
+  attendance: {
+    read: ALL,
+    write: ['admin'], // teachers mark through /api/attendance/bulk (checked per subject)
+    scope: (ctx) => {
+      if (ctx.role === 'admin') return {};
+      if (ctx.role === 'teacher') return { $or: [{ subject: { $in: ctx.subjectIds } }, { student: { $in: ctx.studentIds } }] };
       return { student: { $in: ctx.studentIds } };
     },
   },
@@ -120,7 +138,7 @@ export const POLICY = {
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
       if (ctx.role === 'teacher') return { $or: [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }] };
-      return { classRoom: { $in: ctx.classIds } };
+      return { subject: { $in: ctx.subjectIds } };
     },
   },
 
@@ -137,13 +155,21 @@ export const POLICY = {
   resources: {
     read: ALL,
     write: ['admin', 'teacher'],
-    scope: (ctx) => (ctx.role === 'admin' ? {} : { classRoom: { $in: ctx.classIds } }),
+    scope: (ctx) => {
+      if (ctx.role === 'admin') return {};
+      if (ctx.role === 'teacher') return { classRoom: { $in: ctx.classIds } };
+      return learnerSubjectScope(ctx);
+    },
   },
 
   tasks: {
     read: ALL,
     write: ['admin', 'teacher'],
-    scope: (ctx) => (ctx.role === 'admin' ? {} : { classRoom: { $in: ctx.classIds } }),
+    scope: (ctx) => {
+      if (ctx.role === 'admin') return {};
+      if (ctx.role === 'teacher') return { classRoom: { $in: ctx.classIds } };
+      return { subject: { $in: ctx.subjectIds } };
+    },
   },
 
   submissions: {
@@ -151,7 +177,7 @@ export const POLICY = {
     write: ['admin', 'teacher', 'student'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return {};
+      if (ctx.role === 'teacher') return { student: { $in: ctx.studentIds } };
       return { student: { $in: ctx.studentIds } };
     },
   },
@@ -191,11 +217,12 @@ export const POPULATE = {
   resources: ['classRoom', 'subject', 'uploadedBy'],
   tasks: ['classRoom', 'subject', 'createdBy'],
   submissions: ['task', 'student'],
+  // (fees.payments.recordedBy is left as an id)
   announcements: ['classRoom', 'createdBy'],
 };
 
 const SELECT = {
-  users: 'name email role classRoom subjects children admissionNo phone active createdAt',
+  users: 'name email role classRoom subjects children admissionNo phone active createdAt lastLoginAt',
   default: '',
 };
 

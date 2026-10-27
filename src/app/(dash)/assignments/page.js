@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { list, create, update, remove, fmtDate, todayISO } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import { useLookups } from '@/lib/useLookups';
+import Link from 'next/link';
 import {
-  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, FileOrLink,
+  PageHeader, Card, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, FileOrLink, FileLink,
 } from '@/components/ui';
 
 const blank = { classRoom: '', subject: '', type: 'assignment', title: '', description: '', deadline: '', maxMarks: 0, attachmentUrl: '', attachmentName: '' };
@@ -18,6 +19,14 @@ export default function AssignmentsPage() {
 
   const [tab, setTab] = useState('');
   const [classId, setClassId] = useState('');
+  const [subjectId, setSubjectId] = useState('');
+  const [reviewFor, setReviewFor] = useState(null);
+  const [counts, setCounts] = useState({});
+
+  useEffect(() => {
+    const sid = new URLSearchParams(window.location.search).get('subject');
+    if (sid) setSubjectId(sid);
+  }, []);
   const [rows, setRows] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,12 +40,20 @@ export default function AssignmentsPage() {
     setLoading(true);
     try {
       const calls = [
-        list('tasks', { type: tab || undefined, classRoom: classId || undefined, sort: 'deadline', limit: 300 }),
+        list('tasks', { type: tab || undefined, classRoom: classId || undefined, subject: subjectId || undefined, sort: '-deadline', limit: 300 }),
       ];
-      if (isStudent) calls.push(list('submissions', { limit: 300 }));
+      if (isStudent || canEdit) calls.push(list('submissions', { limit: 1000 }));
       const res = await Promise.all(calls);
       setRows(res[0].items);
       if (isStudent) setSubmissions(res[1].items);
+      if (canEdit) {
+        const c = {};
+        for (const sub of res[1].items) {
+          const k = String(sub.task?._id || sub.task);
+          c[k] = (c[k] || 0) + 1;
+        }
+        setCounts(c);
+      }
       setError('');
     } catch (e) {
       setError(e.message);
@@ -48,7 +65,7 @@ export default function AssignmentsPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, classId]);
+  }, [tab, classId, subjectId]);
 
   async function save(e) {
     e.preventDefault();
@@ -78,12 +95,29 @@ export default function AssignmentsPage() {
       >
         <Select
           value={classId}
-          onChange={(e) => setClassId(e.target.value)}
+          onChange={(e) => {
+            setClassId(e.target.value);
+            setSubjectId('');
+          }}
           options={classes.map((c) => ({ value: c._id, label: c.name }))}
           placeholder="All classes"
         />
+        <Select
+          value={subjectId}
+          onChange={(e) => setSubjectId(e.target.value)}
+          options={subjects
+            .filter((s) => !classId || String(s.classRoom?._id || s.classRoom) === String(classId))
+            .map((s) => ({ value: s._id, label: `${s.name}${classId ? '' : ` — ${s.classRoom?.name || ''}`}` }))}
+          placeholder="All subjects"
+        />
         {canEdit && (
-          <button className="btn-primary" onClick={() => setForm({ ...blank, classRoom: classId })}>
+          <button
+            className="btn-primary"
+            onClick={() => {
+              const subj = subjects.find((s) => s._id === subjectId);
+              setForm({ ...blank, classRoom: classId || subj?.classRoom?._id || subj?.classRoom || '', subject: subjectId });
+            }}
+          >
             Add item
           </button>
         )}
@@ -129,7 +163,13 @@ export default function AssignmentsPage() {
                   <div className="min-w-0">
                     <div className="mb-1.5 flex flex-wrap items-center gap-2">
                       <Badge tone={t.type === 'worksheet' ? 'maroon' : 'gold'}>{t.type}</Badge>
-                      <Badge>{t.subject?.name}</Badge>
+                      {t.subject?._id ? (
+                        <Link href={`/subjects/${t.subject._id}`} className="chip bg-slate-100 text-slate-700 hover:bg-maroon-50 hover:text-maroon">
+                          {t.subject.name}
+                        </Link>
+                      ) : (
+                        <Badge>{t.subject?.name}</Badge>
+                      )}
                       <Badge>{t.classRoom?.name}</Badge>
                     </div>
                     <h3 className="text-base font-bold text-maroon">{t.title}</h3>
@@ -146,10 +186,11 @@ export default function AssignmentsPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3.5">
-                  {t.attachmentUrl && (
-                    <a href={t.attachmentUrl} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
-                      Open {t.attachmentName || 'attachment'}
-                    </a>
+                  {t.attachmentUrl && <FileLink url={t.attachmentUrl} name={t.attachmentName || 'Attachment'} />}
+                  {canEdit && (
+                    <button className="btn-gold btn-sm" onClick={() => setReviewFor(t)}>
+                      Submissions ({counts[String(t._id)] || 0})
+                    </button>
                   )}
                   {t.maxMarks > 0 && <span className="text-xs text-slate-400">Out of {t.maxMarks}</span>}
 
@@ -159,6 +200,14 @@ export default function AssignmentsPage() {
                     </button>
                   )}
                   {sub && <Badge tone="green">Submitted {fmtDate(sub.submittedAt)}</Badge>}
+                  {sub?.url && <FileLink url={sub.url} name={sub.fileName || 'My work'} compact />}
+                  {sub && sub.score !== undefined && sub.score !== null && (
+                    <Badge tone="maroon">
+                      Score {sub.score}
+                      {t.maxMarks ? ` / ${t.maxMarks}` : ''}
+                    </Badge>
+                  )}
+                  {sub?.feedback && <span className="w-full rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">Feedback: {sub.feedback}</span>}
 
                   {canEdit && (
                     <div className="ml-auto flex gap-2">
@@ -271,13 +320,16 @@ export default function AssignmentsPage() {
             </div>
 
             <FileOrLink
-              name="Attachment (pdf, doc, ppt, image or link)"
+              name="Attachment (question paper, worksheet, instructions…)"
+              fileName={form.attachmentName}
               value={form.attachmentUrl}
               onChange={(url, fileName) => setForm({ ...form, attachmentUrl: url, attachmentName: fileName || form.attachmentName })}
             />
           </form>
         )}
       </Modal>
+
+      <ReviewModal task={reviewFor} onClose={() => setReviewFor(null)} onError={setError} onSaved={load} />
 
       <SubmitModal
         state={submitFor}
@@ -306,11 +358,13 @@ export default function AssignmentsPage() {
 
 function SubmitModal({ state, onClose, onSaved, onError }) {
   const [url, setUrl] = useState('');
+  const [fileName, setFileName] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setUrl(state?.existing?.url || '');
+    setFileName(state?.existing?.fileName || '');
     setNote(state?.existing?.note || '');
   }, [state]);
 
@@ -318,8 +372,9 @@ function SubmitModal({ state, onClose, onSaved, onError }) {
     e.preventDefault();
     setBusy(true);
     try {
-      if (state.existing) await update('submissions', state.existing._id, { url, note, submittedAt: new Date() });
-      else await create('submissions', { task: state.task._id, url, note });
+      if (!url && !note.trim()) throw new Error('Upload your work, paste a link, or write a note');
+      if (state.existing) await update('submissions', state.existing._id, { url, fileName, note, submittedAt: new Date() });
+      else await create('submissions', { task: state.task._id, url, fileName, note });
       onSaved();
     } catch (err) {
       onError(err.message);
@@ -346,11 +401,145 @@ function SubmitModal({ state, onClose, onSaved, onError }) {
     >
       {state && (
         <form id="submit-form" onSubmit={save} className="space-y-4">
-          <FileOrLink name="Your work (file or link)" value={url} onChange={(u) => setUrl(u)} />
+          {state.task.attachmentUrl && (
+            <p className="text-xs text-slate-500">
+              Task file: <FileLink url={state.task.attachmentUrl} name={state.task.attachmentName || 'Attachment'} compact />
+            </p>
+          )}
+          <FileOrLink
+            name="Your work (file or link)"
+            value={url}
+            fileName={fileName}
+            purpose="submission"
+            onChange={(u, n) => {
+              setUrl(u);
+              setFileName(n || '');
+            }}
+          />
           <Field label="Note for your teacher">
             <textarea className="input min-h-[80px]" value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
         </form>
+      )}
+    </Modal>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Teacher / admin: who has submitted, download their work, grade it    */
+/* ------------------------------------------------------------------ */
+
+function ReviewModal({ task, onClose, onError, onSaved }) {
+  const [students, setStudents] = useState([]);
+  const [subs, setSubs] = useState({});
+  const [edits, setEdits] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [savingId, setSavingId] = useState('');
+
+  useEffect(() => {
+    if (!task) return;
+    setLoading(true);
+    Promise.all([
+      list('users', { role: 'student', enrolledIn: task.subject?._id || task.subject, sort: 'name', limit: 1000 }),
+      list('submissions', { task: task._id, limit: 1000 }),
+    ])
+      .then(([st, sb]) => {
+        setStudents(st.items);
+        const by = {};
+        for (const x of sb.items) by[String(x.student?._id || x.student)] = x;
+        setSubs(by);
+        setEdits(Object.fromEntries(sb.items.map((x) => [x._id, { score: x.score ?? '', feedback: x.feedback || '' }])));
+      })
+      .catch((e) => onError(e.message))
+      .finally(() => setLoading(false));
+  }, [task, onError]);
+
+  async function grade(sub) {
+    setSavingId(sub._id);
+    try {
+      const e = edits[sub._id] || {};
+      await update('submissions', sub._id, { score: e.score === '' ? null : Number(e.score), feedback: e.feedback });
+      onSaved?.();
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setSavingId('');
+    }
+  }
+
+  const submitted = students.filter((s) => subs[String(s._id)]).length;
+
+  return (
+    <Modal
+      open={!!task}
+      onClose={onClose}
+      wide
+      title={task ? `${task.title} — submissions` : ''}
+      footer={
+        <button className="btn-ghost" onClick={onClose}>
+          Close
+        </button>
+      }
+    >
+      {loading ? (
+        <Spinner />
+      ) : !students.length ? (
+        <Empty title="No students enrolled in this subject" />
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-slate-600">
+            <strong>{submitted}</strong> of {students.length} submitted
+            {task?.deadline ? ` · deadline ${fmtDate(task.deadline)}` : ''}
+            {task?.maxMarks ? ` · out of ${task.maxMarks}` : ''}
+          </p>
+          <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            {students.map((st) => {
+              const sub = subs[String(st._id)];
+              const e = sub ? edits[sub._id] || { score: '', feedback: '' } : null;
+              const late = sub && task?.deadline && String(sub.submittedAt).slice(0, 10) > task.deadline;
+              return (
+                <li key={st._id} className="space-y-2 px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link href={`/students/${st._id}`} className="text-sm font-semibold text-slate-800 hover:text-maroon hover:underline">
+                      {st.name}
+                    </Link>
+                    {sub ? (
+                      <Badge tone={late ? 'amber' : 'green'}>
+                        {late ? 'Late · ' : ''}
+                        {fmtDate(sub.submittedAt)}
+                      </Badge>
+                    ) : (
+                      <Badge tone="red">Not submitted</Badge>
+                    )}
+                    {sub?.url && <FileLink url={sub.url} name={sub.fileName || 'Open work'} />}
+                  </div>
+                  {sub?.note && <p className="rounded bg-slate-50 px-3 py-1.5 text-xs text-slate-600">“{sub.note}”</p>}
+                  {sub && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        className="input w-24 py-1.5 text-sm"
+                        type="number"
+                        min="0"
+                        placeholder="Score"
+                        value={e.score}
+                        onChange={(ev) => setEdits({ ...edits, [sub._id]: { ...e, score: ev.target.value } })}
+                      />
+                      <input
+                        className="input flex-1 py-1.5 text-xs"
+                        placeholder="Feedback for the student"
+                        value={e.feedback}
+                        onChange={(ev) => setEdits({ ...edits, [sub._id]: { ...e, feedback: ev.target.value } })}
+                      />
+                      <button className="btn-primary btn-sm" disabled={savingId === sub._id} onClick={() => grade(sub)}>
+                        {savingId === sub._id ? 'Saving…' : 'Save'}
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
     </Modal>
   );

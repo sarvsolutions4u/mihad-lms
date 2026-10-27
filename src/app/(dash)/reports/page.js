@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api, list } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
-import { PageHeader, Card, Table, Badge, Alert, Spinner, Empty, Field, Select, Stat } from '@/components/ui';
+import { PageHeader, Card, Table, Badge, Alert, Spinner, Empty, Field, Select, Stat, JoinButton } from '@/components/ui';
 
 export default function ReportsPage() {
   const { user } = useSession();
@@ -85,9 +85,7 @@ export default function ReportsPage() {
                 </p>
               </div>
               {report.student.classRoom?.onlineClassLink && (
-                <a href={report.student.classRoom.onlineClassLink} target="_blank" rel="noreferrer" className="btn-ghost btn-sm">
-                  Online class link
-                </a>
+                <JoinButton url={report.student.classRoom.onlineClassLink} label="Batch class link" />
               )}
             </div>
           </Card>
