@@ -17,17 +17,23 @@ import { AwsClient } from 'aws4fetch';
 
 export const R2_MAX_MB = 100;
 
+const env = (k) => String(process.env[k] || '').trim().replace(/^["']|["']$/g, '');
+
 export function r2Configured() {
-  const e = process.env;
-  return !!(e.R2_ACCESS_KEY_ID && e.R2_SECRET_ACCESS_KEY && e.R2_BUCKET && (e.R2_ACCOUNT_ID || e.R2_ENDPOINT));
+  return !!(env('R2_ACCESS_KEY_ID') && env('R2_SECRET_ACCESS_KEY') && bucketName() && (env('R2_ACCOUNT_ID') || env('R2_ENDPOINT')));
+}
+
+/** Bucket name, forgiving a pasted URL or stray slashes. */
+export function bucketName() {
+  return env('R2_BUCKET').replace(/^https?:\/\/[^/]+\//, '').replace(/^\/+|\/+$/g, '');
 }
 
 let client;
 function r2() {
   if (!client) {
     client = new AwsClient({
-      accessKeyId: process.env.R2_ACCESS_KEY_ID,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+      accessKeyId: env('R2_ACCESS_KEY_ID'),
+      secretAccessKey: env('R2_SECRET_ACCESS_KEY'),
       service: 's3',
       region: 'auto',
     });
@@ -35,11 +41,31 @@ function r2() {
   return client;
 }
 
-const endpoint = () =>
-  (process.env.R2_ENDPOINT || `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`).replace(/\/$/, '');
+/**
+ * The R2 address. Accepts the plain 32-character Account ID, or the whole
+ * "https://<id>.r2.cloudflarestorage.com" link pasted into either variable.
+ */
+export function endpoint() {
+  const explicit = env('R2_ENDPOINT');
+  if (explicit && !/r2\.cloudflarestorage\.com/i.test(explicit)) return explicit.replace(/\/+$/, ''); // local testing
+  const raw = explicit || env('R2_ACCOUNT_ID');
+  const id = (raw.match(/[a-f0-9]{32}/i) || [raw.replace(/^https?:\/\//, '').split('.')[0]])[0].toLowerCase();
+  const jurisdiction = (raw.match(/\.(eu|fedramp)\.r2\.cloudflarestorage\.com/i) || [])[1];
+  return `https://${id}.${jurisdiction ? `${jurisdiction.toLowerCase()}.` : ''}r2.cloudflarestorage.com`;
+}
+
+/** Endpoint host with the account id partly hidden — safe to show in a status message. */
+export function endpointHint() {
+  try {
+    const host = new URL(endpoint()).host;
+    return host.replace(/^([a-z0-9]{4})[a-z0-9]+([a-z0-9]{4})\./i, '$1…$2.');
+  } catch {
+    return '(invalid address)';
+  }
+}
 
 const encodeKey = (key) => key.split('/').map(encodeURIComponent).join('/');
-export const objectUrl = (key) => `${endpoint()}/${process.env.R2_BUCKET}/${encodeKey(key)}`;
+export const objectUrl = (key) => `${endpoint()}/${bucketName()}/${encodeKey(key)}`;
 
 /** A signed URL the browser can use directly (PUT to upload, GET to download). */
 export async function presign(method, key, { expires = 600, query = {} } = {}) {
