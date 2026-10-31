@@ -104,3 +104,24 @@ export function disposition(kind, name) {
   const safe = String(name || 'file').replace(/["\r\n]/g, '');
   return `${kind}; filename="${safe.replace(/[^\x20-\x7E]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
 }
+
+export async function getObjectBuffer(key) {
+  const res = await r2().fetch(objectUrl(key));
+  if (!res.ok) throw new Error(`Storage read failed (${res.status})`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+/** Keys (with LastModified) under a prefix — up to 1000. */
+export async function listObjects(prefix) {
+  const url = new URL(`${endpoint()}/${bucketName()}`);
+  url.searchParams.set('list-type', '2');
+  url.searchParams.set('prefix', prefix);
+  url.searchParams.set('max-keys', '1000');
+  const res = await r2().fetch(url.toString());
+  if (!res.ok) throw new Error(`Storage list failed (${res.status})`);
+  const xml = await res.text();
+  return [...xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)].map((m) => ({
+    key: (m[1].match(/<Key>([\s\S]*?)<\/Key>/) || [])[1]?.replace(/&amp;/g, '&') || '',
+    modified: (m[1].match(/<LastModified>([\s\S]*?)<\/LastModified>/) || [])[1] || '',
+  }));
+}

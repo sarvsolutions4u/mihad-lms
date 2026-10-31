@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Icon from './Icon';
-import { normalizeUrl, meetingApp } from '@/lib/links';
+import { normalizeUrl, meetingApp, embedFor } from '@/lib/links';
 import { ACCEPT, MAX_FILE_MB, isStoredFile, downloadUrl, fmtSize } from '@/lib/fileTypes';
 
 /* ---------------------------------------------------------------- */
@@ -335,6 +335,7 @@ export function FileOrLink({ value, onChange, name = 'Attachment', fileName = ''
   const [busy, setBusy] = useState(false);
   const [pct, setPct] = useState(0);
   const [err, setErr] = useState('');
+  const [stamp, setStamp] = useState('');
   const limit = useUploadLimit();
   const inputId = `f-${name.replace(/\W+/g, '-').toLowerCase()}`;
 
@@ -345,6 +346,7 @@ export function FileOrLink({ value, onChange, name = 'Attachment', fileName = ''
     setErr('');
     try {
       const data = await uploadFile(file, { purpose, student, onProgress: setPct });
+      setStamp(data.watermark || '');
       onChange(data.url, data.fileName, data.size);
     } catch (e) {
       setErr(e.message);
@@ -396,6 +398,7 @@ export function FileOrLink({ value, onChange, name = 'Attachment', fileName = ''
         </div>
       )}
       <p className="mt-1 text-[11px] text-slate-400">{hint || `PDF, Word, Excel, PowerPoint, images, audio or MP4 — up to ${limit.maxMB} MB.`}</p>
+      <WatermarkNote status={stamp} />
       {err && <p className="mt-1 text-xs font-medium text-red-700">{err}</p>}
     </div>
   );
@@ -406,6 +409,7 @@ export function FileList({ value = [], onChange, name = 'Files', purpose, studen
   const [busy, setBusy] = useState(false);
   const [pct, setPct] = useState(0);
   const [err, setErr] = useState('');
+  const [stamp, setStamp] = useState('');
   const limit = useUploadLimit();
   const [link, setLink] = useState('');
 
@@ -417,6 +421,7 @@ export function FileList({ value = [], onChange, name = 'Files', purpose, studen
       for (const f of Array.from(files || [])) {
         setPct(0);
         const d = await uploadFile(f, { purpose, student, onProgress: setPct });
+        if (d.watermark) setStamp(d.watermark);
         added.push({ url: d.url, name: d.fileName, size: d.size });
       }
       onChange([...(value || []), ...added]);
@@ -474,19 +479,94 @@ export function FileList({ value = [], onChange, name = 'Files', purpose, studen
         </button>
       </div>
       <p className="mt-1 text-[11px] text-slate-400">
-        {busy ? `Uploading… ${pct ? `${pct}%` : ''}` : `You can pick several files at once — up to ${limit.maxMB} MB each.`}
+        {busy ? `Uploading… ${pct ? `${pct}%` : ''}` : `You can pick several files at once — up to ${limit.maxMB} MB each. For recorded videos, paste the Google Drive link.`}
       </p>
+      <WatermarkNote status={stamp} />
       {err && <p className="mt-1 text-xs font-medium text-red-700">{err}</p>}
     </div>
   );
 }
 
-/** Open / Download for a stored file or an outside link. */
-export function FileLink({ url, name, size, compact = false }) {
+/**
+ * Plays a Google Drive / YouTube link inside the LMS.
+ * Drive's own "open in new window" button (top-right of its player) is covered,
+ * so students watch here rather than in Google Drive.
+ */
+export function MediaViewer({ url, title, onClose, video = false }) {
+  useEffect(() => {
+    const onKey = (ev) => ev.key === 'Escape' && onClose?.();
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
+  const e = embedFor(url);
+  if (!e) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="w-full max-w-5xl" onClick={(ev) => ev.stopPropagation()}>
+        <div className="mb-2 flex items-center justify-between gap-3 text-white">
+          <p className="truncate text-sm font-semibold">{title}</p>
+          <button onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-2xl hover:bg-white/10" aria-label="Close">
+            ×
+          </button>
+        </div>
+        <div
+          className={`relative w-full overflow-hidden rounded-xl bg-black ${video || e.kind === 'youtube' ? 'aspect-video' : 'h-[80vh]'}`}
+          onContextMenu={(ev) => ev.preventDefault()}
+        >
+          <iframe
+            src={e.embed}
+            title={title || 'Viewer'}
+            className="absolute inset-0 h-full w-full"
+            allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+          {e.kind === 'drive' && (
+            // covers Drive's "open in new window" button
+            <div className="absolute right-0 top-0 h-14 w-16 cursor-default bg-transparent" aria-hidden onContextMenu={(ev) => ev.preventDefault()} />
+          )}
+        </div>
+        <p className="mt-2 text-center text-[11px] text-white/50">Al Mihad Training — for enrolled students only. Please do not share or record.</p>
+      </div>
+    </div>
+  );
+}
+
+/** Open / Download for a stored file, or a Watch/View button for Drive & YouTube links. */
+export function FileLink({ url, name, size, compact = false, video = false }) {
+  const [viewing, setViewing] = useState(false);
   if (!url) return null;
   const href = normalizeUrl(url);
   const stored = isStoredFile(href);
-  const label = name || (stored ? 'File' : href.replace(/^https?:\/\//, '').slice(0, 40));
+  const embed = !stored && embedFor(href);
+  const isVideo = video || embed?.kind === 'youtube';
+  const label =
+    name || (stored ? 'File' : embed ? (isVideo ? 'Recorded video' : 'Google Drive file') : href.replace(/^https?:\/\//, '').slice(0, 40));
+
+  if (embed) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setViewing(true)}
+          className={`inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-maroon hover:underline ${
+            compact ? '' : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5'
+          }`}
+          title={isVideo ? 'Watch inside the LMS' : 'View inside the LMS'}
+        >
+          <Icon name={isVideo ? 'play' : 'file'} className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{isVideo ? `Watch: ${label}` : label}</span>
+        </button>
+        {viewing && <MediaViewer url={href} title={label} video={isVideo} onClose={() => setViewing(false)} />}
+      </>
+    );
+  }
+
   return (
     <span className={`inline-flex min-w-0 items-center gap-1.5 ${compact ? '' : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5'}`}>
       <Icon name={stored ? 'file' : 'link'} className="h-3.5 w-3.5 shrink-0 text-maroon" />
@@ -501,6 +581,16 @@ export function FileLink({ url, name, size, compact = false }) {
       )}
     </span>
   );
+}
+
+function WatermarkNote({ status }) {
+  if (status === 'done')
+    return <p className="mt-1 text-[11px] font-medium text-emerald-700">✓ PDF watermarked with Al Mihad and your name. Each student’s copy also carries their own name.</p>;
+  if (status === 'protected')
+    return <p className="mt-1 text-[11px] font-medium text-amber-700">This PDF is password-protected, so it could not be watermarked. Upload an unprotected copy to add the watermark.</p>;
+  if (status === 'unreadable' || status === 'failed')
+    return <p className="mt-1 text-[11px] font-medium text-amber-700">The watermark could not be added to this PDF. It was uploaded as it is.</p>;
+  return null;
 }
 
 /** Opens the online class (Zoom / Meet / Teams) in a new tab — the app takes over from there. */

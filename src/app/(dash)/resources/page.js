@@ -15,7 +15,7 @@ const TYPES = [
   { value: 'doc', label: 'Document' },
   { value: 'ppt', label: 'Presentation' },
   { value: 'paper', label: 'Question paper' },
-  { value: 'video', label: 'Video' },
+  { value: 'video', label: 'Recorded class / video' },
   { value: 'link', label: 'Link' },
   { value: 'image', label: 'Image' },
   { value: 'other', label: 'Other' },
@@ -171,7 +171,7 @@ export default function ResourcesPage() {
               </p>
 
               <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3.5">
-                {r.url && <FileLink url={r.url} name={r.fileName || (TYPES.find((t) => t.value === r.type)?.label || 'Open')} />}
+                {r.url && <FileLink url={r.url} video={r.type === 'video'} name={r.fileName || (r.type === 'video' ? r.title : TYPES.find((t) => t.value === r.type)?.label || 'Open')} />}
                 {canEdit && (
                   <div className="ml-auto flex gap-2">
                     <button
@@ -256,8 +256,18 @@ export default function ResourcesPage() {
               />
             </Field>
 
+            {form.type === 'video' && (
+              <div className="rounded-lg border border-gold-100 bg-gold-50/60 px-4 py-3 text-xs leading-relaxed text-slate-700">
+                <p className="font-semibold text-maroon">Recorded class from Google Drive</p>
+                <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                  <li>In Google Drive, right-click the video → <strong>Share</strong> → General access: <strong>Anyone with the link</strong> · <strong>Viewer</strong>.</li>
+                  <li>Click the ⚙ (settings) in that window and <strong>untick “Viewers and commenters can see the option to download, print and copy”</strong>.</li>
+                  <li>Copy the link and paste it below. Students watch it inside the LMS.</li>
+                </ol>
+              </div>
+            )}
             <FileOrLink
-              name="File or link"
+              name={form.type === 'video' ? 'Google Drive video link' : 'File or link'}
               fileName={form.fileName}
               value={form.url}
               onChange={(url, fileName) => setForm({ ...form, url, fileName: fileName || '' })}

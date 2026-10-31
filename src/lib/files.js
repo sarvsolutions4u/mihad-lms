@@ -73,7 +73,13 @@ export async function saveFile(file, meta = {}) {
     throw e;
   }
 
-  const buf = Buffer.from(await file.arrayBuffer());
+  let buf = Buffer.from(await file.arrayBuffer());
+  if (contentType === 'application/pdf' && meta.purpose === 'general' && ['teacher', 'admin'].includes(meta.role)) {
+    const { stampPdf, uploaderLine } = await import('@/lib/watermark');
+    const stamped = await stampPdf(buf, { footer: [uploaderLine({ role: meta.role, name: meta.uploaderName })] });
+    if (stamped.ok) buf = stamped.bytes;
+    meta = { ...meta, watermark: stamped.ok ? 'done' : stamped.reason };
+  }
   const id = crypto.randomBytes(16).toString('hex'); // unguessable id
   const b = await bucket();
   const name = String(file.name || 'file').replace(/[\\/]/g, '_').slice(0, 180);
@@ -85,7 +91,7 @@ export async function saveFile(file, meta = {}) {
     up.end(buf);
   });
 
-  return { id, url: `/api/files/${id}`, name, size: buf.length, contentType };
+  return { id, url: `/api/files/${id}`, name, size: buf.length, contentType, watermark: meta.watermark || '' };
 }
 
 export async function findFile(id) {

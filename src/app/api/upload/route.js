@@ -24,7 +24,7 @@ export async function POST(req) {
     if (!file || typeof file === 'string') return fail('No file received', 422);
 
     const purpose = String(form.get('purpose') || 'general');
-    const meta = { uploadedBy: String(session.uid), role: session.role, purpose };
+    const meta = { uploadedBy: String(session.uid), role: session.role, purpose, uploaderName: session.name || '' };
 
     if (purpose === 'fee') {
       if (session.role !== 'admin') return fail('Only the office can upload fee documents', 403);
@@ -34,7 +34,7 @@ export async function POST(req) {
     }
 
     const saved = await saveFile(file, meta);
-    return ok({ url: saved.url, fileName: saved.name, size: saved.size, contentType: saved.contentType });
+    return ok({ url: saved.url, fileName: saved.name, size: saved.size, contentType: saved.contentType, watermark: saved.watermark || '' });
   } catch (err) {
     return handleError(err);
   }

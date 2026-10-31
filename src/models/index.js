@@ -346,6 +346,9 @@ const StoredFileSchema = new Schema(
     uploadedBy: { type: ObjectId, ref: 'User' },
     role: { type: String },
     status: { type: String, enum: ['pending', 'ready'], default: 'pending', index: true },
+    // PDF watermark: 'done' | 'protected' (password-protected, left as is) | '' (not a PDF / not needed)
+    watermark: { type: String, default: '' },
+    uploaderName: { type: String, default: '' },
   },
   { timestamps: true }
 );

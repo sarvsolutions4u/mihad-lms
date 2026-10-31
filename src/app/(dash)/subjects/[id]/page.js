@@ -11,7 +11,7 @@ import AttendanceRegister, { statusTone } from '@/components/AttendanceRegister'
 
 const RES_LABEL = {
   note: 'Notes', pdf: 'PDF', doc: 'Document', ppt: 'Presentation', paper: 'Question paper',
-  video: 'Video', link: 'Link', image: 'Image', other: 'Other',
+  video: 'Recorded class', link: 'Link', image: 'Image', other: 'Other',
 };
 
 export default function SubjectPage() {
@@ -348,7 +348,7 @@ function ResourcesTab({ resources, canManage, subjectId }) {
               },
               { key: 'type', header: 'Type', render: (r) => <Badge tone="maroon">{RES_LABEL[r.type] || r.type}</Badge> },
               { key: 'by', header: 'Added', render: (r) => <span className="text-xs text-slate-500">{fmtDate(r.createdAt)}{r.uploadedBy?.name ? ` · ${r.uploadedBy.name}` : ''}</span> },
-              { key: 'file', header: 'File', render: (r) => (r.url ? <FileLink url={r.url} name={r.fileName || 'Open'} /> : '—') },
+              { key: 'file', header: 'File', render: (r) => (r.url ? <FileLink url={r.url} video={r.type === 'video'} name={r.fileName || (r.type === 'video' ? r.title : 'Open')} /> : '—') },
             ]}
             rows={resources}
           />

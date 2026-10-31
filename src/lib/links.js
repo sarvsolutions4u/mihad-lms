@@ -64,3 +64,41 @@ export function meetingApp(url) {
   if (u.includes('webex')) return 'Webex';
   return '';
 }
+
+/** Google Drive file id from any Drive / Docs file link, or null. */
+export function driveFileId(url) {
+  const u = String(url || '');
+  if (!/(drive|docs)\.google\.com/i.test(u)) return null;
+  const m = u.match(/\/(?:file\/d|document\/d|presentation\/d|spreadsheets\/d)\/([\w-]{20,})/) || u.match(/[?&]id=([\w-]{20,})/);
+  return m ? m[1] : null;
+}
+
+/** YouTube video id, or null. */
+export function youtubeId(url) {
+  const u = String(url || '');
+  const m =
+    u.match(/youtu\.be\/([\w-]{11})/) ||
+    u.match(/youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+/**
+ * How to show a link inside the LMS:
+ *   { kind: 'drive', embed }   Drive file (video, PDF, doc…) in Google's viewer
+ *   { kind: 'youtube', embed } YouTube video
+ *   null                       open normally
+ */
+export function embedFor(url) {
+  const d = driveFileId(url);
+  if (d) {
+    const u = String(url);
+    const kindOf = /docs\.google\.com\/(document|presentation|spreadsheets)\/d\//.exec(u)?.[1];
+    const embed = kindOf
+      ? `https://docs.google.com/${kindOf}/d/${d}/preview`
+      : `https://drive.google.com/file/d/${d}/preview`;
+    return { kind: 'drive', embed };
+  }
+  const y = youtubeId(url);
+  if (y) return { kind: 'youtube', embed: `https://www.youtube-nocookie.com/embed/${y}?rel=0&modestbranding=1` };
+  return null;
+}

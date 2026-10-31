@@ -65,6 +65,18 @@ older files keep working after R2 is switched on.
    `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — then redeploy.
 5. Sign in as admin → **Settings** → *Test file storage* should say “All good”.
 
+### Recorded classes (Google Drive) and PDF watermarks
+
+- **Videos:** add a Resource of type *Recorded class / video* with the Google Drive link (shared as
+  "Anyone with the link · Viewer", with downloading turned off in Drive's share settings). Students
+  press **Watch** and the video plays inside the LMS; Drive's "open in new window" button is covered.
+  YouTube links play the same way. Other Drive files (PDF, Docs, Slides) open in the same viewer.
+- **PDF watermarks:** PDFs a trainer uploads are stamped on every page with a light diagonal
+  "AL MIHAD TRAINING" and *Trainer: <name> | Al Mihad Training Centre*. When a student or parent opens
+  or downloads one, they get their own copy that also says *Downloaded by <name> (<admission no>) |
+  <date>*. Password-protected PDFs can't be stamped and are left as they are (the trainer is told).
+  Student work and fee receipts are never watermarked. PDFs linked from Google Drive are not stamped.
+
 ### Fee alerts
 
 Unpaid fees past their due date turn **overdue** automatically. Admins see a red count on *Fees* in

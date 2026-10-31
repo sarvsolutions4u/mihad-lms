@@ -1,12 +1,45 @@
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/db';
-import { StoredFile } from '@/models';
+import { StoredFile, User } from '@/models';
 import { requireSession } from '@/lib/auth';
 import { findFile, isInline, canOpenFile, deleteFile } from '@/lib/files';
-import { presign, disposition } from '@/lib/r2';
-import { fail, ok, handleError } from '@/lib/api';
+import { presign, disposition, headObject, getObjectBuffer, putObject, listObjects, deleteObject } from '@/lib/r2';
+import { stampPdf, isPdf, learnerLine } from '@/lib/watermark';
+import { fail, ok, handleError, todayISO } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+const LEARNER = ['student', 'parent'];
+const learnerFor = (session) => User.findById(session.uid).select('name admissionNo').lean();
+
+/**
+ * A student's / parent's own copy of a course PDF, stamped with their name.
+ * Kept for the day under _stamped/<date>/ so repeat opens are instant; older
+ * days are cleared out whenever a new copy is made.
+ */
+async function learnerCopyKey(meta, session) {
+  const today = todayISO();
+  const key = `_stamped/${today}/${meta._id}/${session.uid}.pdf`;
+  if (await headObject(key)) return key;
+
+  const stamped = await stampPdf(await getObjectBuffer(meta.key), {
+    footer: [learnerLine(await learnerFor(session))],
+    diagonal: meta.watermark === 'done' ? '' : 'AL MIHAD TRAINING',
+    at: 'top',
+  });
+  if (!stamped.ok) return null;
+  await putObject(key, stamped.bytes, 'application/pdf');
+
+  // tidy up earlier days' copies
+  try {
+    const old = (await listObjects('_stamped/')).filter((o) => o.key.split('/')[1] < today);
+    await Promise.all(old.map((o) => deleteObject(o.key).catch(() => {})));
+  } catch {
+    /* housekeeping only */
+  }
+  return key;
+}
 
 /**
  * Open (inline) or download (?download=1) a stored file.
@@ -26,7 +59,11 @@ export async function GET(req, ctxParams) {
       if (meta.status !== 'ready') return fail('This upload did not finish', 404);
       if (!(await canOpenFile(session, meta))) return fail('You do not have access to this file', 403);
       const kind = wantsDownload || !isInline(meta.contentType) ? 'attachment' : 'inline';
-      const url = await presign('GET', meta.key, {
+      let key = meta.key;
+      if (LEARNER.includes(session.role) && meta.purpose === 'general' && isPdf(meta.contentType, meta.name) && meta.watermark !== 'protected') {
+        key = (await learnerCopyKey(meta, session)) || meta.key;
+      }
+      const url = await presign('GET', key, {
         expires: 300,
         query: { 'response-content-disposition': disposition(kind, meta.name), 'response-content-type': meta.contentType },
       });
@@ -46,8 +83,16 @@ export async function GET(req, ctxParams) {
         .on('error', reject)
         .on('end', resolve);
     });
-    const body = Buffer.concat(chunks);
+    let body = Buffer.concat(chunks);
     const contentType = doc.metadata?.contentType || 'application/octet-stream';
+    if (LEARNER.includes(session.role) && (doc.metadata?.purpose || 'general') === 'general' && isPdf(contentType, doc.filename)) {
+      const stamped = await stampPdf(body, {
+        footer: [learnerLine(await learnerFor(session))],
+        diagonal: doc.metadata?.watermark === 'done' ? '' : 'AL MIHAD TRAINING',
+        at: 'top',
+      });
+      if (stamped.ok) body = stamped.bytes;
+    }
     const kind = wantsDownload || !isInline(contentType) ? 'attachment' : 'inline';
 
     return new Response(body, {
