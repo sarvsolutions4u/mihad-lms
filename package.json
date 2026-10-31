@@ -10,6 +10,7 @@
     "check": "node scripts/check-env.mjs"
   },
   "dependencies": {
+    "aws4fetch": "^1.0.20",
     "bcryptjs": "2.4.3",
     "exceljs": "^4.4.0",
     "jose": "5.9.6",

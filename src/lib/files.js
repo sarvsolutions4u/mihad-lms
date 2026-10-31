@@ -95,10 +95,36 @@ export async function findFile(id) {
   return doc ? { doc, bucket: b } : null;
 }
 
+/** Remove a file wherever it lives (Cloudflare R2 or the database). */
 export async function deleteFile(id) {
+  if (!/^[a-f0-9]{32}$/.test(String(id))) return;
+  await dbConnect();
+  const { StoredFile } = await import('@/models');
+  const meta = await StoredFile.findById(id).lean();
+  if (meta) {
+    const { deleteObject } = await import('@/lib/r2');
+    await deleteObject(meta.key).catch(() => {});
+    await StoredFile.deleteOne({ _id: id });
+    return;
+  }
   const found = await findFile(id);
   if (found) await found.bucket.delete(id);
 }
+
+/** Who may open a file: fee files only for admins and that student's parents. */
+export async function canOpenFile(session, meta = {}) {
+  if (meta.purpose !== 'fee') return true; // course material: anyone signed in
+  if (session.role === 'admin') return true;
+  if (session.role === 'parent') {
+    await dbConnect();
+    const { User } = await import('@/models');
+    const me = await User.findById(session.uid).select('children').lean();
+    return (me?.children || []).some((c) => String(c) === String(meta.student));
+  }
+  return false;
+}
+
+export const newFileId = () => crypto.randomBytes(16).toString('hex');
 
 /** "/api/files/<id>" -> "<id>" (or null for outside links) */
 export function fileIdFromUrl(url) {

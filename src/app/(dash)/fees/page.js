@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { api, list, create, update, remove, fmtDate, todayISO } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import {
-  PageHeader, Card, Table, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, Stat, FileLink, FileList, uploadFile,
+  PageHeader, Card, Table, Modal, Field, Select, Badge, Alert, Spinner, Empty, Confirm, Stat, FileLink, FileList, uploadFile, useUploadLimit,
 } from '@/components/ui';
 import Icon from '@/components/Icon';
-import { ACCEPT, MAX_FILE_MB } from '@/lib/fileTypes';
+import { ACCEPT } from '@/lib/fileTypes';
 
 const toneFor = (s) => ({ paid: 'green', overdue: 'red', partial: 'amber', pending: 'slate' }[s] || 'slate');
 const label = (s) => ({ partial: 'part paid' }[s] || s);
@@ -372,8 +372,10 @@ function FeeDetail({ fee, isAdmin, onClose, onChanged, onError }) {
   const [pay, setPay] = useState(blankPay());
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const [err, setErr] = useState('');
   const [removeIdx, setRemoveIdx] = useState(null);
+  const limit = useUploadLimit();
 
   useEffect(() => {
     setPay(blankPay());
@@ -399,7 +401,7 @@ function FeeDetail({ fee, isAdmin, onClose, onChanged, onError }) {
     try {
       let receipt;
       if (file) {
-        const up = await uploadFile(file, { purpose: 'fee', student: studentId });
+        const up = await uploadFile(file, { purpose: 'fee', student: studentId, onProgress: setPct });
         receipt = { url: up.url, name: up.fileName, size: up.size };
       }
       const payment = { amount, date: pay.date, method: pay.method, receiptNo: pay.receiptNo, note: pay.note, ...(receipt ? { receipt } : {}) };
@@ -506,7 +508,7 @@ function FeeDetail({ fee, isAdmin, onClose, onChanged, onError }) {
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={`Receipt file (PDF or photo, up to ${MAX_FILE_MB} MB)`}>
+            <Field label={`Receipt file (PDF or photo, up to ${limit.maxMB} MB)`}>
               <input
                 type="file"
                 accept={ACCEPT}
@@ -521,7 +523,7 @@ function FeeDetail({ fee, isAdmin, onClose, onChanged, onError }) {
           {err && <p className="text-xs font-medium text-red-700">{err}</p>}
           <div className="flex justify-end">
             <button className="btn-primary" disabled={busy}>
-              {busy ? 'Saving…' : 'Save payment'}
+              {busy ? (file && pct < 100 ? `Uploading ${pct}%…` : 'Saving…') : 'Save payment'}
             </button>
           </div>
         </form>

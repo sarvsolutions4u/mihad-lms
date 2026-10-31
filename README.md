@@ -45,11 +45,25 @@ timetable — and each subject's teacher sees only the students enrolled in it.
 
 ### Files (uploads and downloads)
 
-Files are stored inside the same MongoDB database (GridFS) — nothing else to set up. Limits:
-**4 MB per file** (a Vercel limit); PDF, Word, Excel, PowerPoint, images, audio, MP4 and ZIP. For long
-videos or larger files, paste a YouTube / Google Drive link instead. Every download goes through
-`/api/files/<id>` and needs a signed-in user; fee receipts open only for admins and that student's
-parents. PDFs and images open in the browser; everything else downloads.
+Uploaded files go to **Cloudflare R2** (10 GB free, then about $0.015 per GB a month, no download
+fees). The browser uploads straight to R2 with a 15-minute signed link, so files never pass through
+Vercel — **up to 100 MB per file**. Every download goes through `/api/files/<id>`, which checks who is
+signed in and then redirects to a 5-minute signed link. Fee receipts open only for admins and that
+student's parents. PDFs and images open in the browser; everything else downloads.
+
+Until the R2 variables below are set, files are stored in MongoDB instead (4 MB per file), and those
+older files keep working after R2 is switched on.
+
+**Setting up R2 (once):**
+1. Cloudflare dashboard → **R2** → *Create bucket* `mihad-lms-files`.
+2. Bucket → *Settings* → *CORS policy* → paste:
+   ```json
+   [{ "AllowedOrigins": ["https://mihad-lms.vercel.app"], "AllowedMethods": ["GET", "PUT"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+   ```
+3. R2 → *Manage API tokens* → *Create API token* → **Object Read & Write**, limited to that bucket.
+4. Vercel → project → *Settings* → *Environment Variables*: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+   `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — then redeploy.
+5. Sign in as admin → **Settings** → *Test file storage* should say “All good”.
 
 ### Fee alerts
 

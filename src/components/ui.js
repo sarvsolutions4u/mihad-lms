@@ -238,41 +238,113 @@ export function Confirm({ open, onClose, onConfirm, message = 'Delete this recor
   );
 }
 
-/** Upload one file to the app's storage. Returns { url, fileName, size }. */
-export async function uploadFile(file, { purpose, student } = {}) {
+/* ---- uploads ------------------------------------------------------- */
+
+let limitPromise;
+/** { mode: 'r2' | 'direct', maxMB } — fetched once per page load. */
+export function getUploadLimit() {
+  if (!limitPromise) {
+    limitPromise = fetch('/api/upload/sign')
+      .then((r) => r.json())
+      .then((d) => (d?.ok ? { mode: d.mode, maxMB: d.maxMB } : { mode: 'direct', maxMB: MAX_FILE_MB }))
+      .catch(() => ({ mode: 'direct', maxMB: MAX_FILE_MB }));
+  }
+  return limitPromise;
+}
+
+export function useUploadLimit() {
+  const [limit, setLimit] = useState({ mode: 'direct', maxMB: MAX_FILE_MB });
+  useEffect(() => {
+    let alive = true;
+    getUploadLimit().then((l) => alive && setLimit(l));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return limit;
+}
+
+async function readJson(res) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function putWithProgress(url, file, contentType, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(Math.round((e.loaded / e.total) * 100));
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
+    xhr.onerror = () => reject(new Error('Upload failed — check your connection and try again'));
+    xhr.send(file);
+  });
+}
+
+/**
+ * Upload one file. Goes straight to Cloudflare R2 when it is set up (large
+ * files are fine), otherwise into the database (4 MB limit).
+ * Returns { url, fileName, size }.
+ */
+export async function uploadFile(file, { purpose, student, onProgress } = {}) {
   if (!file) throw new Error('Choose a file first');
-  if (file.size > MAX_FILE_MB * 1024 * 1024) {
-    throw new Error(`"${file.name}" is larger than ${MAX_FILE_MB} MB. Compress it, or paste a Google Drive / YouTube link instead.`);
+
+  const signRes = await fetch('/api/upload/sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName: file.name, size: file.size, purpose, student }),
+  });
+  const sign = await readJson(signRes);
+  if (!signRes.ok || !sign || sign.ok === false) throw new Error(sign?.error || 'Upload failed');
+
+  if (sign.mode === 'r2') {
+    await putWithProgress(sign.uploadUrl, file, sign.contentType, onProgress);
+    const doneRes = await fetch('/api/upload/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: sign.id }),
+    });
+    const done = await readJson(doneRes);
+    if (!doneRes.ok || !done || done.ok === false) throw new Error(done?.error || 'Upload could not be confirmed');
+    onProgress?.(100);
+    return done;
+  }
+
+  // database storage
+  if (file.size > sign.maxMB * 1024 * 1024) {
+    throw new Error(`"${file.name}" is larger than ${sign.maxMB} MB. Compress it, or paste a Google Drive / YouTube link instead.`);
   }
   const fd = new FormData();
   fd.append('file', file);
   if (purpose) fd.append('purpose', purpose);
   if (student) fd.append('student', student);
   const res = await fetch('/api/upload', { method: 'POST', body: fd });
-  let data = null;
-  try {
-    data = await res.json();
-  } catch {
-    /* non-JSON (e.g. the host rejected a large body) */
-  }
+  const data = await readJson(res);
   if (!res.ok || !data || data.ok === false) {
-    throw new Error(data?.error || (res.status === 413 ? `File is larger than ${MAX_FILE_MB} MB` : 'Upload failed'));
+    throw new Error(data?.error || (res.status === 413 ? `File is larger than ${sign.maxMB} MB` : 'Upload failed'));
   }
+  onProgress?.(100);
   return data;
 }
 
 /** A file field that accepts EITHER an upload or a pasted link. */
 export function FileOrLink({ value, onChange, name = 'Attachment', fileName = '', purpose, student, hint }) {
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const [err, setErr] = useState('');
+  const limit = useUploadLimit();
   const inputId = `f-${name.replace(/\W+/g, '-').toLowerCase()}`;
 
   async function upload(file) {
     if (!file) return;
     setBusy(true);
+    setPct(0);
     setErr('');
     try {
-      const data = await uploadFile(file, { purpose, student });
+      const data = await uploadFile(file, { purpose, student, onProgress: setPct });
       onChange(data.url, data.fileName, data.size);
     } catch (e) {
       setErr(e.message);
@@ -316,9 +388,14 @@ export function FileOrLink({ value, onChange, name = 'Attachment', fileName = ''
                      file:bg-maroon-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold
                      file:text-maroon hover:file:bg-maroon-100"
         />
-        {busy && <span className="shrink-0 text-xs font-semibold text-maroon">Uploading…</span>}
+        {busy && <span className="shrink-0 text-xs font-semibold text-maroon">Uploading… {pct ? `${pct}%` : ''}</span>}
       </div>
-      <p className="mt-1 text-[11px] text-slate-400">{hint || `PDF, Word, Excel, PowerPoint, images, audio or MP4 — up to ${MAX_FILE_MB} MB.`}</p>
+      {busy && pct > 0 && (
+        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+      <p className="mt-1 text-[11px] text-slate-400">{hint || `PDF, Word, Excel, PowerPoint, images, audio or MP4 — up to ${limit.maxMB} MB.`}</p>
       {err && <p className="mt-1 text-xs font-medium text-red-700">{err}</p>}
     </div>
   );
@@ -327,7 +404,9 @@ export function FileOrLink({ value, onChange, name = 'Attachment', fileName = ''
 /** A list of files (multi-attach) — e.g. lesson plan documents, fee invoices. */
 export function FileList({ value = [], onChange, name = 'Files', purpose, student }) {
   const [busy, setBusy] = useState(false);
+  const [pct, setPct] = useState(0);
   const [err, setErr] = useState('');
+  const limit = useUploadLimit();
   const [link, setLink] = useState('');
 
   async function add(files) {
@@ -336,7 +415,8 @@ export function FileList({ value = [], onChange, name = 'Files', purpose, studen
     try {
       const added = [];
       for (const f of Array.from(files || [])) {
-        const d = await uploadFile(f, { purpose, student });
+        setPct(0);
+        const d = await uploadFile(f, { purpose, student, onProgress: setPct });
         added.push({ url: d.url, name: d.fileName, size: d.size });
       }
       onChange([...(value || []), ...added]);
@@ -394,7 +474,7 @@ export function FileList({ value = [], onChange, name = 'Files', purpose, studen
         </button>
       </div>
       <p className="mt-1 text-[11px] text-slate-400">
-        {busy ? 'Uploading…' : `You can pick several files at once — up to ${MAX_FILE_MB} MB each.`}
+        {busy ? `Uploading… ${pct ? `${pct}%` : ''}` : `You can pick several files at once — up to ${limit.maxMB} MB each.`}
       </p>
       {err && <p className="mt-1 text-xs font-medium text-red-700">{err}</p>}
     </div>

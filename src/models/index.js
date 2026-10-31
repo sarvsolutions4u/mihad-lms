@@ -331,6 +331,26 @@ const AnnouncementSchema = new Schema(
 );
 
 /* ------------------------------------------------------------------ */
+/* 13. StoredFile — an uploaded file kept in Cloudflare R2             */
+/* ------------------------------------------------------------------ */
+
+const StoredFileSchema = new Schema(
+  {
+    _id: { type: String }, // random 32-hex id used in /api/files/<id>
+    key: { type: String, required: true }, // object key in the bucket
+    name: { type: String, required: true, trim: true },
+    size: { type: Number, default: 0 },
+    contentType: { type: String, default: 'application/octet-stream' },
+    purpose: { type: String, default: 'general' }, // general | fee | submission
+    student: { type: ObjectId, ref: 'User' }, // for fee files
+    uploadedBy: { type: ObjectId, ref: 'User' },
+    role: { type: String },
+    status: { type: String, enum: ['pending', 'ready'], default: 'pending', index: true },
+  },
+  { timestamps: true }
+);
+
+/* ------------------------------------------------------------------ */
 
 export const User = models.User || model('User', UserSchema);
 export const ClassRoom = models.ClassRoom || model('ClassRoom', ClassRoomSchema);
@@ -344,6 +364,7 @@ export const Resource = models.Resource || model('Resource', ResourceSchema);
 export const Task = models.Task || model('Task', TaskSchema);
 export const Submission = models.Submission || model('Submission', SubmissionSchema);
 export const Announcement = models.Announcement || model('Announcement', AnnouncementSchema);
+export const StoredFile = models.StoredFile || model('StoredFile', StoredFileSchema);
 
 export const MODELS = {
   users: User,
