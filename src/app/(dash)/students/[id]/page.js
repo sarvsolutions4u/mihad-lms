@@ -11,6 +11,9 @@ import {
 import { statusTone } from '@/components/AttendanceRegister';
 import { classLinkFor } from '@/lib/links';
 import SubjectPicker from '@/components/SubjectPicker';
+import CourseProgress from '@/components/CourseProgress';
+import { SessionChip } from '@/components/Sessions';
+import { programLabel, programTone } from '@/lib/programs';
 
 const feeTone = (s) => ({ paid: 'green', overdue: 'red', partial: 'amber', pending: 'slate' }[s] || 'slate');
 const money = (n, c = 'AED') => `${c} ${(Number(n) || 0).toLocaleString()}`;
@@ -22,7 +25,7 @@ export default function StudentPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [tab, setTab] = useState('attendance');
+  const [tab, setTab] = useState('upcoming');
   const [enrolOpen, setEnrolOpen] = useState(false);
   const [confirm, setConfirm] = useState(false);
 
@@ -45,7 +48,9 @@ export default function StudentPage() {
   const { student, subjects, attendanceSummary: att, fees, parents, canManage } = data;
   const feeOutstanding = (fees || []).reduce((s, f) => s + Math.max(0, (f.amount || 0) - (f.paidAmount || 0)), 0);
 
+  const upcoming = data.upcoming || [];
   const tabs = [
+    { key: 'upcoming', label: 'Coming up', count: upcoming.length },
     { key: 'attendance', label: 'Attendance', count: att.total },
     { key: 'marks', label: 'Marks', count: data.marks.length },
     { key: 'work', label: 'Submitted work', count: data.submissions.length },
@@ -61,6 +66,7 @@ export default function StudentPage() {
         title={student.name}
         subtitle={[student.admissionNo, student.classRoom?.name, student.active === false ? 'Account disabled' : null].filter(Boolean).join(' · ')}
       >
+        <Badge tone={programTone(student.programType || student.classRoom?.programType)}>{programLabel(student.programType || student.classRoom?.programType)}</Badge>
         <JoinButton url={classLinkFor({ classRoom: student.classRoom })} label="Batch class link" />
         {(user?.role === 'admin' || user?.role === 'parent') && (
           <Link href={`/reports?student=${student._id}`} className="btn-ghost">
@@ -95,7 +101,7 @@ export default function StudentPage() {
         )}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5">
           <Card title="Details" bodyClass="px-5 py-4">
             <dl className="space-y-2.5 text-sm">
@@ -169,7 +175,40 @@ export default function StudentPage() {
         </div>
 
         <div className="lg:col-span-2">
+          {!!data.courses?.length && (
+            <Card
+              title="Course hours"
+              className="mb-5"
+              action={canManage && <Link href="/people" className="text-xs font-semibold text-maroon hover:underline">Edit hours & slots</Link>}
+              bodyClass="space-y-3 p-4"
+            >
+              {data.courses.map((c) => (
+                <CourseProgress key={c.subject} course={c} />
+              ))}
+              <p className="text-[11px] text-slate-500">Hours are deducted when the student is marked present or late. An absence in a one-to-one class moves the schedule forward instead.</p>
+            </Card>
+          )}
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
+
+          {tab === 'upcoming' && (
+            <Card bodyClass="space-y-2 p-4">
+              {upcoming.length ? (
+                upcoming.map((u) => (
+                  <div key={u._id} className="grid grid-cols-[5rem_1fr] items-start gap-2">
+                    <p className="pt-2 text-xs font-bold text-maroon">
+                      {fmtDate(u.date).replace(/ \d{4}$/, '')}
+                      <span className="block text-[10px] font-medium text-slate-400">
+                        {new Date(`${u.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' })}
+                      </span>
+                    </p>
+                    <SessionChip s={u} />
+                  </div>
+                ))
+              ) : (
+                <Empty title="Nothing planned ahead" hint="Upcoming classes, work and tests from the lesson planner show here." />
+              )}
+            </Card>
+          )}
 
           {tab === 'attendance' && (
             <Card bodyClass="px-5 py-4">

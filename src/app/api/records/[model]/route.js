@@ -98,7 +98,7 @@ export async function GET(req, ctxParams) {
     let query = Model.find(filter).sort(sort).skip(skip).limit(limit);
     const sel = selectFor(key);
     if (sel) query = query.select(sel);
-    for (const p of POPULATE[key] || []) query = query.populate(p, 'name email role title amount classRoom subject deadline onlineClassLink teacher type maxMarks');
+    for (const p of POPULATE[key] || []) query = query.populate(p, 'name email role title amount classRoom subject deadline onlineClassLink teacher type maxMarks programType date startTime endTime kind');
 
     const [items, total] = await Promise.all([query.lean(), Model.countDocuments(filter)]);
     return ok({ items, total });
@@ -138,6 +138,11 @@ export async function POST(req, ctxParams) {
         body.subjects = body.subjects.filter((id) => ctx.subjectIds.includes(String(id)));
       }
       if (body.role !== 'student') delete body.classRoom;
+      if (session.role === 'teacher') delete body.courses;
+      if (body.classRoom) {
+        const cls = await MODELS.classrooms.findById(body.classRoom).select('programType').lean();
+        if (cls) body.programType = cls.programType || 'academic';
+      }
     }
 
     if (key === 'lessonplans') {

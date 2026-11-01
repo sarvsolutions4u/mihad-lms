@@ -33,6 +33,17 @@ export async function GET() {
     const ttFilter = { day: dayName };
     if (session.role === 'teacher') ttFilter.$or = [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }];
     else if (session.role !== 'admin') ttFilter.subject = { $in: ctx.subjectIds };
+    // today's planned sessions (lesson planner)
+    const sessFilter = { date: today, status: { $ne: 'missed' } };
+    let sessScope = {};
+    if (session.role === 'teacher') sessScope = { $or: [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }] };
+    else if (session.role !== 'admin') sessScope = POLICY.lessonplans.scope(ctx);
+    out.sections.todaySessions = await LessonPlan.find({ $and: [sessFilter, sessScope] })
+      .sort({ startTime: 1 })
+      .populate({ path: 'subject', select: 'name onlineClassLink classRoom', populate: { path: 'classRoom', select: 'name onlineClassLink' } })
+      .populate('students', 'name')
+      .lean();
+
     out.sections.todayClasses = await TimetableSlot.find(ttFilter)
       .sort('startTime')
       .populate('subject', 'name onlineClassLink')
@@ -69,11 +80,12 @@ export async function GET() {
         { label: 'Fees outstanding', value: feesDue },
       ];
 
-      out.sections.weekPlans = await LessonPlan.find({ weekOf: monday })
+      out.sections.weekPlans = await LessonPlan.find({ weekOf: monday, status: { $ne: 'missed' } })
         .populate('subject', 'name')
         .populate('classRoom', 'name')
         .populate('teacher', 'name')
-        .sort('classRoom')
+        .sort({ date: 1, startTime: 1 })
+        .limit(40)
         .lean();
     }
 
@@ -81,7 +93,7 @@ export async function GET() {
       const [mySubjects, myStudents, plans, pending] = await Promise.all([
         Subject.countDocuments({ teacher: ctx.uid }),
         Promise.resolve(ctx.studentIds.length),
-        LessonPlan.find({ teacher: ctx.uid, weekOf: monday })
+        LessonPlan.find({ teacher: ctx.uid, weekOf: monday, status: { $ne: 'missed' } }).sort({ date: 1, startTime: 1 })
           .populate('subject', 'name')
           .populate('classRoom', 'name')
           .lean(),
@@ -118,7 +130,7 @@ export async function GET() {
           .populate('subject', 'name')
           .populate('student', 'name')
           .lean(),
-        LessonPlan.find({ subject: { $in: ctx.subjectIds }, weekOf: monday })
+        LessonPlan.find({ $and: [POLICY.lessonplans.scope(ctx), { weekOf: monday, status: { $ne: 'missed' } }] })
           .populate('subject', 'name')
           .populate('teacher', 'name')
           .lean(),

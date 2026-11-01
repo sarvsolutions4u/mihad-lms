@@ -6,6 +6,7 @@ import { useSession } from '@/components/SessionProvider';
 import Link from 'next/link';
 import { PageHeader, Card, Table, Badge, Alert, Spinner, Empty, Field, Select, Stat } from '@/components/ui';
 import AttendanceRegister from '@/components/AttendanceRegister';
+import { SessionAttendance } from '@/components/Sessions';
 
 const STATUSES = [
   { value: 'present', label: 'Present', tone: 'green' },
@@ -28,8 +29,8 @@ export default function AttendancePage() {
         title="Attendance"
         subtitle={
           user.role === 'teacher'
-            ? 'Pick one of your subjects and a date, tap each student’s status, then save. The office, students and parents see it straight away.'
-            : 'Mark by subject, or a whole-day register for a batch. Teachers can mark their own subjects too.'
+            ? 'Pick a subject and a date, open that day’s session from the lesson planner, tap each student’s status and save.'
+            : 'Mark each planned session by subject, or a whole-day register for a batch. Teachers can mark their own subjects too.'
         }
       >
         <div className="flex gap-1.5">
@@ -119,7 +120,9 @@ function MarkAttendance({ isAdmin }) {
           )}
         </div>
       </Card>
-      {!students ? (
+      {kind === 's' && id ? (
+        <SessionAttendance key={target} subjectId={id} programType={subjects.find((s) => s._id === id)?.classRoom?.programType} />
+      ) : !students ? (
         <Spinner />
       ) : (
         <AttendanceRegister

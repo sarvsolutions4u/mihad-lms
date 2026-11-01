@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 import { dbConnect } from '@/lib/db';
-import { User, Subject, Attendance, Mark, Submission, Fee } from '@/models';
+import { User, Subject, Attendance, Mark, Submission, Fee, LessonPlan, ClassRoom } from '@/models';
+import { courseProgress } from '@/lib/schedule';
 import { requireSession } from '@/lib/auth';
 import { getActorContext } from '@/lib/access';
 import { subjectIdsForStudent } from '@/lib/enrol';
-import { ok, fail, handleError } from '@/lib/api';
+import { ok, fail, handleError, todayISO } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,8 +33,8 @@ export async function GET(req, ctxParams) {
     if (!allowed) return fail('You do not have access to this student', 403);
 
     const student = await User.findOne({ _id: id, role: 'student' })
-      .select('name email phone admissionNo classRoom subjects active createdAt lastLoginAt')
-      .populate('classRoom', 'name onlineClassLink')
+      .select('name email phone admissionNo classRoom subjects active createdAt lastLoginAt programType courses')
+      .populate('classRoom', 'name onlineClassLink programType')
       .lean();
     if (!student) return fail('Student not found', 404);
 
@@ -71,7 +72,25 @@ export async function GET(req, ctxParams) {
       }
     }
 
+    const today = todayISO();
+    const [courses, upcoming] = await Promise.all([
+      courseProgress(student, today),
+      LessonPlan.find({
+        subject: { $in: subjectIds },
+        date: { $gte: today },
+        status: { $in: ['scheduled', 'cancelled'] },
+        $or: [{ students: { $size: 0 } }, { students: student._id }],
+      })
+        .sort({ date: 1, startTime: 1 })
+        .limit(20)
+        .populate('subject', 'name')
+        .populate('students', 'name')
+        .lean(),
+    ]);
+
     return ok({
+      courses,
+      upcoming,
       student: { ...student, enrolment: student.subjects?.length ? 'chosen' : 'batch' },
       subjects,
       attendance,

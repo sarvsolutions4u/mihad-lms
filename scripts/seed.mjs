@@ -43,6 +43,8 @@ const planS = new Schema({
   classRoom: ObjectId, subject: ObjectId, teacher: ObjectId, weekOf: String, title: String,
   portion: String, plannedDate: String, portionCompleted: Boolean, notesGiven: Boolean,
   examDone: Boolean, examTitle: String, examDate: String, maxMarks: Number, teacherRemark: String,
+  date: String, startTime: String, endTime: String, kind: String, status: String, durationMins: Number,
+  students: [ObjectId], attachments: Array,
 }, { timestamps: true });
 
 const annS = new Schema({
@@ -208,28 +210,44 @@ async function main() {
   }
   console.log('Timetable    IGCSE Grade 10, Mon–Fri 16:00');
 
-  /* 7 — this week's lesson plans for the IGCSE batch */
+  /* 7 — two weeks of dated sessions for the IGCSE batch (lesson planner) */
   const monday = weekStart();
+  const addD = (iso, n) => {
+    const d = new Date(`${iso}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  const todayStr = new Date().toISOString().slice(0, 10);
   for (const [i, subj] of subjects['IGCSE Grade 10'].entries()) {
-    const exists = await LessonPlan.findOne({ subject: subj._id, weekOf: monday });
-    if (!exists) {
+    if (await LessonPlan.findOne({ subject: subj._id })) continue;
+    for (const week of [0, 7]) {
+      const date = addD(monday, week + (i % 5));
+      const test = week === 7;
       await LessonPlan.create({
         classRoom: g10._id,
         subject: subj._id,
         teacher: subj.teacher,
-        weekOf: monday,
-        title: `Week plan — ${subj.name}`,
-        portion: `Chapter ${i + 3}: introduction, worked examples and practice questions.`,
-        plannedDate: monday,
-        portionCompleted: i < 2,
-        notesGiven: i < 2,
+        weekOf: addD(monday, week),
+        date,
+        plannedDate: date,
+        startTime: '16:00',
+        endTime: '17:00',
+        durationMins: 60,
+        kind: test ? 'test' : 'class',
+        status: date < todayStr ? 'done' : 'scheduled',
+        students: [],
+        title: test ? `${subj.name} — Chapter ${i + 3} test` : `${subj.name} — Chapter ${i + 3}`,
+        portion: test ? 'Short test on this chapter.' : `Chapter ${i + 3}: introduction, worked examples and practice questions.`,
+        portionCompleted: date < todayStr,
+        notesGiven: date < todayStr,
         examDone: false,
-        examTitle: `${subj.name} weekly test`,
-        maxMarks: 25,
+        examTitle: test ? `${subj.name} — Chapter ${i + 3} test` : '',
+        examDate: test ? date : '',
+        maxMarks: test ? 25 : 0,
       });
     }
   }
-  console.log(`Lesson plans week of ${monday}`);
+  console.log(`Lesson planner sessions from ${monday}`);
 
   /* 8 — a welcome announcement */
   if (!(await Announcement.findOne({ title: 'Welcome to the Al Mihad Learning Portal' }))) {

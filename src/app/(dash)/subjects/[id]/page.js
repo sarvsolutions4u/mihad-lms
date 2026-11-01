@@ -7,7 +7,10 @@ import { api, fmtDate } from '@/lib/client';
 import { classLinkFor } from '@/lib/links';
 import { useSession } from '@/components/SessionProvider';
 import { PageHeader, Card, Table, Badge, Alert, Spinner, Empty, Stat, Tabs, FileLink, JoinButton } from '@/components/ui';
-import AttendanceRegister, { statusTone } from '@/components/AttendanceRegister';
+import { statusTone } from '@/components/AttendanceRegister';
+import { SessionChip, SessionAttendance } from '@/components/Sessions';
+import CourseProgress from '@/components/CourseProgress';
+import { programLabel, programTone } from '@/lib/programs';
 
 const RES_LABEL = {
   note: 'Notes', pdf: 'PDF', doc: 'Document', ppt: 'Presentation', paper: 'Question paper',
@@ -48,13 +51,13 @@ export default function SubjectPage() {
     ? [
         { key: 'students', label: 'Students', count: data.students.length },
         { key: 'attendance', label: 'Attendance' },
-        { key: 'plans', label: 'Lesson plans', count: data.plans.length },
+        { key: 'plans', label: 'Lesson planner' },
         { key: 'tasks', label: 'Assignments', count: data.tasks.length },
         { key: 'resources', label: 'Notes & papers', count: data.resources.length },
       ]
     : [
         { key: 'overview', label: 'My progress' },
-        { key: 'plans', label: 'Lesson plans', count: data.plans.length },
+        { key: 'plans', label: 'Lesson planner' },
         { key: 'tasks', label: 'Assignments', count: data.tasks.length },
         { key: 'resources', label: 'Notes & papers', count: data.resources.length },
       ];
@@ -70,6 +73,7 @@ export default function SubjectPage() {
           .filter(Boolean)
           .join(' · ')}
       >
+        <Badge tone={programTone(subject.classRoom?.programType)}>{programLabel(subject.classRoom?.programType)}</Badge>
         {link ? <JoinButton url={link} size="md" /> : <Badge tone="amber">No class link set</Badge>}
         {user?.role === 'admin' && (
           <Link href="/classes" className="btn-ghost">
@@ -93,7 +97,7 @@ export default function SubjectPage() {
         <div className="mb-5 grid gap-4 sm:grid-cols-4">
           <Stat label="Students enrolled" value={data.stats.students} />
           <Stat label="Open assignments" value={data.stats.openTasks} />
-          <Stat label="Portions completed" value={`${data.stats.plansDone}/${data.stats.plans}`} />
+          <Stat label="Sessions done" value={`${data.stats.plansDone}/${data.stats.plans}`} />
           <Stat
             label="Avg attendance"
             value={(() => {
@@ -110,9 +114,9 @@ export default function SubjectPage() {
       <Tabs tabs={tabs} value={tab} onChange={setTab} />
 
       {tab === 'students' && <StudentsTab students={data.students} isAdmin={user?.role === 'admin'} />}
-      {tab === 'attendance' && <AttendanceRegister subjectId={subject._id} students={data.students} onSaved={load} />}
+      {tab === 'attendance' && <SessionAttendance subjectId={subject._id} programType={subject.classRoom?.programType} />}
       {tab === 'overview' && <ProgressTab data={data} />}
-      {tab === 'plans' && <PlansTab plans={data.plans} canManage={canManage} subjectId={subject._id} />}
+      {tab === 'plans' && <PlansTab plans={data.plans} canManage={canManage} subjectId={subject._id} today={data.today} />}
       {tab === 'tasks' && <TasksTab data={data} canManage={canManage} />}
       {tab === 'resources' && <ResourcesTab resources={data.resources} canManage={canManage} subjectId={subject._id} />}
     </>
@@ -138,6 +142,25 @@ function StudentsTab({ students, isAdmin }) {
           },
           { key: 'classRoom', header: 'Batch', render: (s) => s.classRoom?.name || '—' },
           { key: 'phone', header: 'Phone', render: (s) => s.phone || '—' },
+          ...(students.some((s) => s.course)
+            ? [
+                {
+                  key: 'hours',
+                  header: 'Course hours',
+                  render: (s) =>
+                    s.course ? (
+                      <span className="text-xs">
+                        <Badge tone={s.course.leftHours > 0 ? 'gold' : 'green'}>{s.course.leftHours} hrs left</Badge>
+                        <span className="block text-slate-400">
+                          {s.course.usedHours}/{s.course.totalHours} done
+                        </span>
+                      </span>
+                    ) : (
+                      '—'
+                    ),
+                },
+              ]
+            : []),
           {
             key: 'att',
             header: 'Attendance',
@@ -189,7 +212,14 @@ function ProgressTab({ data }) {
   const present = att.filter((a) => ['present', 'late'].includes(a.status)).length;
   const multi = (data.learners || []).length > 1;
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      {!!data.courses?.length && (
+        <div className="space-y-3 lg:col-span-2">
+          {data.courses.map((c, i) => (
+            <CourseProgress key={i} course={{ ...c, subjectName: multi ? `${c.subjectName} — ${c.studentName}` : c.subjectName }} />
+          ))}
+        </div>
+      )}
       <Card title="Attendance in this subject" bodyClass="px-5 py-4">
         <p className="mb-3 text-2xl font-bold text-maroon">
           {att.length ? `${Math.round((present / att.length) * 100)}%` : '—'}
@@ -224,45 +254,57 @@ function ProgressTab({ data }) {
   );
 }
 
-function PlansTab({ plans, canManage, subjectId }) {
+function PlansTab({ plans, canManage, subjectId, today }) {
+  const upcoming = plans.filter((p) => p.date && p.date >= today && p.status !== 'done').sort((a, b) => (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')));
+  const past = plans.filter((p) => !upcoming.includes(p));
+  const href = (p) => `/lesson-plans?subject=${subjectId}`;
   return (
     <>
-      {canManage && (
-        <div className="mb-4 flex justify-end">
-          <Link href={`/lesson-plans?subject=${subjectId}`} className="btn-primary">
-            Open lesson planner
-          </Link>
-        </div>
-      )}
+      <div className="mb-4 flex justify-end">
+        <Link href={`/lesson-plans?subject=${subjectId}`} className={canManage ? 'btn-primary' : 'btn-ghost'}>
+          {canManage ? 'Plan sessions in the lesson planner' : 'Open the lesson planner'}
+        </Link>
+      </div>
       {!plans.length ? (
         <Card>
-          <Empty title="No lesson plans yet" />
+          <Empty title="Nothing planned yet" hint={canManage ? 'Plan classes, work and tests by date in the lesson planner.' : undefined} />
         </Card>
       ) : (
-        <div className="space-y-3">
-          {plans.map((p) => (
-            <Card key={p._id} bodyClass="p-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-maroon">{p.title}</h3>
-                <Badge>Week of {fmtDate(p.weekOf)}</Badge>
-                {p.portionCompleted ? <Badge tone="green">Portion done</Badge> : <Badge tone="amber">In progress</Badge>}
-                {p.notesGiven && <Badge tone="maroon">Notes given</Badge>}
-                {p.examDone && <Badge tone="gold">Exam done</Badge>}
-              </div>
-              {p.portion && <p className="mt-2 text-sm text-slate-600">{p.portion}</p>}
-              {p.teacherRemark && <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">{p.teacherRemark}</p>}
-              {!!p.attachments?.length && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {p.attachments.map((a, i) => (
-                    <FileLink key={i} url={a.url} name={a.name} size={a.size} />
-                  ))}
-                </div>
-              )}
-            </Card>
-          ))}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <Card title={`Coming up (${upcoming.length})`} bodyClass="space-y-2 p-4">
+            {upcoming.length ? (
+              upcoming.slice(0, 40).map((p) => <DatedChip key={p._id} p={p} href={href(p)} />)
+            ) : (
+              <Empty title="Nothing planned ahead" />
+            )}
+          </Card>
+          <Card title={`Covered so far (${past.length})`} bodyClass="space-y-2 p-4">
+            {past.length ? past.slice(0, 40).map((p) => <DatedChip key={p._id} p={p} href={href(p)} />) : <Empty title="No sessions yet" />}
+          </Card>
         </div>
       )}
     </>
+  );
+}
+
+function DatedChip({ p, href }) {
+  return (
+    <div className="grid grid-cols-[4.5rem_1fr] items-start gap-2">
+      <Link href={href} className="pt-2 text-xs font-bold text-maroon hover:underline">
+        {p.date ? fmtDate(p.date).replace(/ \d{4}$/, '') : fmtDate(p.weekOf)}
+        <span className="block text-[10px] font-medium text-slate-400">
+          {p.date ? new Date(`${p.date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }) : 'week'}
+        </span>
+      </Link>
+      <SessionChip s={p} showSubject={!!p.students?.length} />
+      {!!p.attachments?.length && (
+        <div className="col-start-2 -mt-1 flex flex-wrap gap-2">
+          {p.attachments.map((a, i) => (
+            <FileLink key={i} url={a.url} name={a.name} size={a.size} compact />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

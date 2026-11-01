@@ -15,6 +15,24 @@ export const PAYMENT_METHODS = ['cash', 'card', 'bank transfer', 'cheque', 'onli
 export const TASK_TYPES = ['assignment', 'worksheet'];
 export const AUDIENCES = ['all', 'teachers', 'students', 'parents'];
 export const FEE_STATUS = ['pending', 'partial', 'paid', 'overdue'];
+export const PROGRAM_TYPES = ['academic', 'short_term', 'university'];
+export const PROGRAM_LABEL = { academic: 'Academic', short_term: 'Short-term upskilling', university: 'University & Diploma' };
+export const SESSION_KINDS = ['class', 'work', 'test', 'revision', 'holiday'];
+export const SESSION_STATUS = ['scheduled', 'done', 'missed', 'cancelled'];
+
+/** Monday of the week for a "YYYY-MM-DD" date. */
+const mondayOf = (iso) => {
+  const d = new Date(`${iso}T00:00:00Z`);
+  const dow = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  return d.toISOString().slice(0, 10);
+};
+const minutesBetween = (a, b) => {
+  const m = (t) => (/^\d{1,2}:\d{2}$/.test(t || '') ? Number(t.split(':')[0]) * 60 + Number(t.split(':')[1]) : null);
+  const x = m(a);
+  const y = m(b);
+  return x !== null && y !== null && y > x ? y - x : 0;
+};
 
 /** "YYYY-MM-DD" today in Dubai — used to work out overdue fees. */
 const dubaiToday = () =>
@@ -50,6 +68,24 @@ const UserSchema = new Schema(
     admissionNo: { type: String, trim: true },
     // student: the subjects they are enrolled in. Empty = every subject of their class.
     subjects: [{ type: ObjectId, ref: 'Subject', index: true }],
+    programType: { type: String, enum: PROGRAM_TYPES, default: 'academic' },
+
+    // short-term / one-to-one courses: total hours and the student's weekly time slots
+    courses: [
+      {
+        subject: { type: ObjectId, ref: 'Subject' },
+        totalHours: { type: Number, default: 0, min: 0 },
+        startDate: { type: String, default: '' }, // "YYYY-MM-DD"
+        slots: [
+          {
+            day: { type: String, enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] },
+            startTime: { type: String, default: '' },
+            endTime: { type: String, default: '' },
+            _id: false,
+          },
+        ],
+      },
+    ],
 
     // parent-only — one parent may have several children
     children: [{ type: ObjectId, ref: 'User', index: true }],
@@ -74,6 +110,7 @@ const ClassRoomSchema = new Schema(
     classTeacher: { type: ObjectId, ref: 'User' },
     description: { type: String, trim: true, default: '' },
     order: { type: Number, default: 0 },
+    programType: { type: String, enum: PROGRAM_TYPES, default: 'academic' },
   },
   { timestamps: true }
 );
@@ -128,6 +165,7 @@ const AttendanceSchema = new Schema(
     status: { type: String, enum: ATTENDANCE_STATUS, default: 'present' },
     remark: { type: String, trim: true, default: '' },
     markedBy: { type: ObjectId, ref: 'User' },
+    lessonPlan: { type: ObjectId, ref: 'LessonPlan', index: true }, // the session it was marked against
   },
   { timestamps: true }
 );
@@ -205,9 +243,19 @@ const LessonPlanSchema = new Schema(
     teacher: { type: ObjectId, ref: 'User', required: true, index: true },
 
     weekOf: { type: String, required: true, index: true }, // Monday of the week, "YYYY-MM-DD"
-    title: { type: String, required: true, trim: true },
-    portion: { type: String, trim: true, default: '' }, // what is planned to be covered
+    title: { type: String, required: true, trim: true }, // topic / what the session is about
+    portion: { type: String, trim: true, default: '' }, // what students will do
     plannedDate: { type: String, default: '' },
+
+    // dated sessions (the lesson planner)
+    date: { type: String, default: '', index: true }, // "YYYY-MM-DD"
+    startTime: { type: String, default: '' }, // "16:00"
+    endTime: { type: String, default: '' },
+    kind: { type: String, enum: SESSION_KINDS, default: 'class' },
+    status: { type: String, enum: SESSION_STATUS, default: 'scheduled', index: true },
+    durationMins: { type: Number, default: 0 },
+    students: [{ type: ObjectId, ref: 'User', index: true }], // one-to-one sessions; empty = everyone enrolled
+    pushedFrom: { type: String, default: '' }, // original date if moved forward
 
     // the tick boxes that appear once the plan is uploaded
     portionCompleted: { type: Boolean, default: false },
@@ -226,6 +274,24 @@ const LessonPlanSchema = new Schema(
 );
 
 LessonPlanSchema.index({ subject: 1, weekOf: 1 });
+LessonPlanSchema.index({ subject: 1, date: 1 });
+
+const KIND_TITLE = { class: 'Class', work: 'Work session', test: 'Test', revision: 'Revision', holiday: 'No class' };
+
+LessonPlanSchema.pre('validate', function sessionDefaults() {
+  if (!this.date && this.plannedDate) this.date = this.plannedDate;
+  if (!this.date && this.weekOf) this.date = this.weekOf;
+  if (this.date) {
+    this.plannedDate = this.date;
+    this.weekOf = mondayOf(this.date);
+  }
+  if (!this.title || !String(this.title).trim()) this.title = KIND_TITLE[this.kind] || 'Class';
+  this.durationMins = minutesBetween(this.startTime, this.endTime);
+  if (this.kind === 'test') {
+    if (!this.examTitle) this.examTitle = this.title;
+    if (!this.examDate && this.date) this.examDate = this.date;
+  }
+});
 
 /* ------------------------------------------------------------------ */
 /* 8. Mark — a score for one student against one lesson plan / exam    */

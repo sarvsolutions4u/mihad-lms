@@ -24,7 +24,7 @@ export async function GET() {
       session.role === 'admin' ? {} : session.role === 'teacher' ? { teacher: ctx.uid } : { _id: { $in: ctx.subjectIds } };
 
     const subjects = await Subject.find(filter)
-      .populate('classRoom', 'name onlineClassLink order')
+      .populate('classRoom', 'name onlineClassLink order programType')
       .populate('teacher', 'name')
       .lean();
 

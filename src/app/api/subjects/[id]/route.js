@@ -4,6 +4,7 @@ import { Subject, User, LessonPlan, Task, Resource, Attendance, Mark, Submission
 import { requireSession } from '@/lib/auth';
 import { getActorContext } from '@/lib/access';
 import { enrolledStudentsFilter } from '@/lib/enrol';
+import { courseProgress } from '@/lib/schedule';
 import { ok, fail, handleError, todayISO } from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export async function GET(req, ctxParams) {
     const ctx = await getActorContext(session);
 
     const subject = await Subject.findById(id)
-      .populate('classRoom', 'name onlineClassLink academicYear')
+      .populate('classRoom', 'name onlineClassLink academicYear programType')
       .populate('teacher', 'name email phone')
       .lean();
     if (!subject) return fail('Subject not found', 404);
@@ -36,8 +37,11 @@ export async function GET(req, ctxParams) {
     if (!canManage && !isLearner) return fail('You are not enrolled in this subject', 403);
 
     const today = todayISO();
+    const planFilter = canManage
+      ? { subject: id }
+      : { subject: id, status: { $ne: 'missed' }, $or: [{ students: { $size: 0 } }, { students: { $exists: false } }, { students: { $in: ctx.studentIds } }] };
     const [plans, tasks, resources, slots] = await Promise.all([
-      LessonPlan.find({ subject: id }).sort({ weekOf: -1, plannedDate: -1 }).limit(30).populate('teacher', 'name').lean(),
+      LessonPlan.find(planFilter).sort({ date: -1, weekOf: -1, startTime: -1 }).limit(120).populate('teacher', 'name').populate('students', 'name').lean(),
       Task.find({ subject: id }).sort({ deadline: -1 }).limit(40).lean(),
       Resource.find({ subject: id }).sort({ createdAt: -1 }).limit(60).populate('uploadedBy', 'name').lean(),
       TimetableSlot.find({ subject: id }).lean(),
@@ -47,7 +51,7 @@ export async function GET(req, ctxParams) {
 
     if (canManage) {
       const students = await User.find(enrolledStudentsFilter([subject]))
-        .select('name email phone admissionNo classRoom subjects active')
+        .select('name email phone admissionNo classRoom subjects active courses programType')
         .populate('classRoom', 'name')
         .sort('name')
         .lean();
@@ -73,9 +77,17 @@ export async function GET(req, ctxParams) {
         ]),
       ]);
       const attBy = Object.fromEntries(att.map((a) => [String(a._id), a]));
+      const progress = Object.fromEntries(
+        await Promise.all(
+          students
+            .filter((st) => (st.courses || []).some((c) => String(c.subject) === String(subject._id)))
+            .map(async (st) => [String(st._id), (await courseProgress(st, today)).find((p) => p.subject === String(subject._id))])
+        )
+      );
       out.students = students.map((s) => {
         const a = attBy[String(s._id)];
         return {
+          course: progress[String(s._id)] || null,
           ...s,
           enrolment: s.subjects?.length ? 'chosen' : 'batch',
           attendance: a ? { total: a.total, present: a.present, pct: Math.round((a.present / a.total) * 100), last: a.last, lastDate: a.lastDate } : null,
@@ -86,20 +98,23 @@ export async function GET(req, ctxParams) {
       out.stats = {
         students: students.length,
         openTasks: tasks.filter((t) => t.deadline && t.deadline >= today).length,
-        plansDone: plans.filter((p) => p.portionCompleted).length,
-        plans: plans.length,
+        plansDone: plans.filter((p) => p.status === 'done').length,
+        plans: plans.filter((p) => p.status === 'done' || (p.status === 'scheduled' && p.kind !== 'holiday' && (!p.date || p.date <= today))).length,
       };
     } else {
       const [attendance, marks, mySubs, kids] = await Promise.all([
         Attendance.find({ subject: id, student: { $in: ctx.studentIds } }).sort('-date').limit(60).populate('student', 'name').lean(),
         Mark.find({ subject: id, student: { $in: ctx.studentIds } }).sort('-date').populate('student', 'name').lean(),
         Submission.find({ task: { $in: tasks.map((t) => t._id) }, student: { $in: ctx.studentIds } }).lean(),
-        User.find({ _id: { $in: ctx.studentIds } }).select('name').lean(),
+        User.find({ _id: { $in: ctx.studentIds } }).select('name courses').lean(),
       ]);
       out.attendance = attendance;
       out.marks = marks;
       out.submissions = mySubs;
-      out.learners = kids;
+      out.learners = kids.map((k) => ({ _id: k._id, name: k.name }));
+      out.courses = (
+        await Promise.all(kids.map(async (k) => (await courseProgress(k, today)).filter((c) => c.subject === id).map((c) => ({ ...c, studentName: k.name }))))
+      ).flat();
     }
 
     return ok(out);

@@ -12,7 +12,7 @@ const NAV = [
   { href: '/subjects', label: 'My Subjects', adminLabel: 'Subjects', icon: 'book', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/timetable', label: 'Timetable', icon: 'calendar', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/attendance', label: 'Attendance', icon: 'check', roles: ['admin', 'teacher', 'student', 'parent'] },
-  { href: '/lesson-plans', label: 'Lesson Plans', icon: 'plan', roles: ['admin', 'teacher', 'student', 'parent'] },
+  { href: '/lesson-plans', label: 'Lesson Planner', icon: 'plan', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/assignments', label: 'Assignments', icon: 'clipboard', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/resources', label: 'Resources', icon: 'folder', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/reports', label: 'Progress Reports', icon: 'chart', roles: ['admin', 'teacher', 'student', 'parent'] },

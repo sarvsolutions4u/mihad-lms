@@ -1,5 +1,5 @@
 import { dbConnect } from '@/lib/db';
-import { MODELS, Attendance, Mark, Submission, Fee, User } from '@/models';
+import { MODELS, Attendance, Mark, Submission, Fee, User, LessonPlan, ClassRoom } from '@/models';
 import { cleanLinks } from '@/lib/links';
 import { deleteFile, fileIdFromUrl } from '@/lib/files';
 import { requireSession, hashPassword } from '@/lib/auth';
@@ -60,8 +60,15 @@ export async function PATCH(req, ctxParams) {
     const body = cleanLinks(key, stripProtected(await req.json()));
 
     if (key === 'users') {
-      // subject enrolment is decided by the office
-      if (session.role === 'teacher') delete body.subjects;
+      // subject enrolment and course hours are decided by the office
+      if (session.role === 'teacher') {
+        delete body.subjects;
+        delete body.courses;
+      }
+      if (body.classRoom) {
+        const cls = await ClassRoom.findById(body.classRoom).select('programType').lean();
+        if (cls) body.programType = cls.programType || 'academic';
+      }
       if (body.password) {
         body.passwordHash = await hashPassword(body.password);
         delete body.password;
@@ -138,6 +145,7 @@ export async function DELETE(req, ctxParams) {
         Attendance.deleteMany({ student: doc._id }),
         Mark.deleteMany({ student: doc._id }),
         Submission.deleteMany({ student: doc._id }),
+        LessonPlan.deleteMany({ students: { $size: 1, $all: [doc._id] } }), // their one-to-one sessions
         Fee.deleteMany({ student: doc._id }),
         User.updateMany({ children: doc._id }, { $pull: { children: doc._id } }),
         ...fileIds.map((fid) => deleteFile(fid).catch(() => {})),

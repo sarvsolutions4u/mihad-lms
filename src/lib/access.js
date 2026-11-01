@@ -138,7 +138,13 @@ export const POLICY = {
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
       if (ctx.role === 'teacher') return { $or: [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }] };
-      return { subject: { $in: ctx.subjectIds } };
+      // learners: their subjects' sessions, except one-to-one sessions of other students
+      return {
+        $and: [
+          { subject: { $in: ctx.subjectIds } },
+          { $or: [{ students: { $size: 0 } }, { students: { $exists: false } }, { students: { $in: ctx.studentIds } }] },
+        ],
+      };
     },
   },
 
@@ -212,7 +218,7 @@ export const POPULATE = {
   timetable: ['classRoom', 'subject', 'teacher'],
   attendance: ['student', 'classRoom', 'subject'],
   fees: ['student'],
-  lessonplans: ['classRoom', 'subject', 'teacher'],
+  lessonplans: ['classRoom', 'subject', 'teacher', 'students'],
   marks: ['student', 'subject', 'classRoom', 'lessonPlan'],
   resources: ['classRoom', 'subject', 'uploadedBy'],
   tasks: ['classRoom', 'subject', 'createdBy'],
@@ -222,7 +228,7 @@ export const POPULATE = {
 };
 
 const SELECT = {
-  users: 'name email role classRoom subjects children admissionNo phone active createdAt lastLoginAt',
+  users: 'name email role classRoom subjects children admissionNo phone active createdAt lastLoginAt programType courses',
   default: '',
 };
 

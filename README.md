@@ -28,7 +28,7 @@ roughly 1,000+ typical PDFs fit comfortably. For videos, paste a YouTube / Drive
 | Subject page (students, attendance, plans, work) | every subject | own subjects | enrolled subjects (own progress) | children's subjects |
 | Student page (attendance, marks, work, parents) | everyone | students in own subjects | self | own children (+ fees) |
 | Attendance | mark any subject or a whole-day register | mark own subjects | view own | view child's |
-| Lesson plans + tick boxes + files | full | own subjects | view & download | view & download |
+| Lesson planner (dated classes, work, tests) | full | own subjects | view & download | view & download |
 | Marks | full | own subjects | view own | view child's |
 | Assignments, worksheets | full | own subjects, see & grade submissions | view, upload work | view |
 | Notes, question papers, resources | full | own subjects | enrolled subjects | view |
@@ -42,6 +42,26 @@ A student with **no subjects chosen** is enrolled in every subject of their batc
 picks subjects (People → Edit, the student's page → *Change subjects*, or during bulk upload), the
 student and their parent see **only those subjects** — their plans, assignments, notes, papers and
 timetable — and each subject's teacher sees only the students enrolled in it.
+
+### Programmes and the lesson planner
+
+Every batch, and every student, has a **programme**: *Academic*, *Short-term upskilling* or
+*University & Diploma*. It is chosen first when enrolling a student, and the batch list then shows
+only batches of that programme.
+
+- **Lesson planner** — teachers plan *sessions* by date, any day up to a year ahead, one date at a
+  time or repeating on chosen weekdays. Each session is a **Class** (topic), **Work** (what students
+  will do), **Test** (topics, max marks), **Revision** or **No class**, with optional start/end time
+  and files. Students and parents see the same planner (week or month view).
+- **Attendance follows the planner** — pick a subject and date, open that day's session and mark
+  each student. If a class happened that was not planned, add it from the attendance screen.
+- **Short-term upskilling** — at enrolment the office sets each course's **total hours**, start date
+  and **weekly slots** (day + start/end time). Class slots are generated automatically until the hours
+  are covered. Topics are not planned ahead — the teacher records what was covered when marking
+  attendance. Hours attended (present/late) are deducted; the student and parent see hours left.
+- **Push-forward** — for Short-term and University & Diploma, when a session has only one student and
+  that student is marked absent, the session and everything after it moves one slot later, a
+  "missed" marker stays on the original date, and no hours are deducted. The teacher can untick this.
 
 ### Files (uploads and downloads)
 

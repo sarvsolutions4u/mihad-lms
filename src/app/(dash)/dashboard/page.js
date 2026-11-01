@@ -8,6 +8,7 @@ import { PageHeader, Card, Stat, Badge, Empty, Spinner, Alert, JoinButton } from
 import Icon from '@/components/Icon';
 import SubjectCard from '@/components/SubjectCard';
 import { classLinkFor } from '@/lib/links';
+import { kindOf, fmtRange } from '@/lib/programs';
 
 const money = (n) => `AED ${(Number(n) || 0).toLocaleString()}`;
 
@@ -118,10 +119,56 @@ export default function DashboardPage() {
         </section>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Card title="Today's classes" bodyClass="">
-            {data.sections.todayClasses?.length ? (
+          <Card
+            title="Today's sessions"
+            action={
+              <Link href="/lesson-plans" className="text-xs font-semibold text-maroon hover:text-gold-600">
+                Lesson planner →
+              </Link>
+            }
+            bodyClass=""
+          >
+            {data.sections.todaySessions?.length ? (
+              <ul className="divide-y divide-slate-100">
+                {data.sections.todaySessions.map((s) => {
+                  const k = kindOf(s.kind);
+                  const link = classLinkFor({ subject: s.subject, classRoom: s.subject?.classRoom });
+                  const staff = user?.role === 'admin' || user?.role === 'teacher';
+                  return (
+                    <li key={s._id} className="flex flex-wrap items-center gap-4 px-5 py-3.5">
+                      <div className="w-24 shrink-0">
+                        <p className="text-sm font-bold text-maroon">{s.startTime ? fmtRange(s.startTime).trim() : 'Today'}</p>
+                        <p className="text-[11px] text-slate-400">{s.endTime ? `to ${fmtRange(s.endTime)}` : ''}</p>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge tone={k.tone}>{k.label}</Badge>
+                          {s.status === 'done' && <Badge tone="green">Done</Badge>}
+                          <Link href={`/subjects/${s.subject?._id}`} className="truncate text-sm font-semibold text-slate-800 hover:text-maroon hover:underline">
+                            {s.subject?.name || 'Subject'}
+                          </Link>
+                        </div>
+                        <p className="truncate text-xs text-slate-500">
+                          {s.title}
+                          {s.subject?.classRoom?.name ? ` · ${s.subject.classRoom.name}` : ''}
+                          {s.students?.length ? ` · ${s.students.map((x) => x.name).join(', ')}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        {staff && s.kind !== 'holiday' && s.status !== 'cancelled' && (
+                          <Link href={`/attendance?subject=${s.subject?._id}`} className="btn-ghost btn-sm">
+                            {s.status === 'done' ? 'Register' : 'Mark attendance'}
+                          </Link>
+                        )}
+                        {link && s.kind !== 'holiday' && <JoinButton url={link} label="Join" />}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : data.sections.todayClasses?.length ? (
               <ul className="divide-y divide-slate-100">
                 {data.sections.todayClasses.map((slot) => {
                   const link = classLinkFor({ slot });
@@ -147,13 +194,13 @@ export default function DashboardPage() {
                 })}
               </ul>
             ) : (
-              <Empty title="No classes scheduled today" hint="The timetable is maintained by the administrator." />
+              <Empty title="Nothing planned for today" hint="Sessions come from the lesson planner." />
             )}
           </Card>
 
           {data.sections.weekPlans && (
             <Card
-              title="This week's lesson plans"
+              title="This week in the planner"
               action={
                 <Link href="/lesson-plans" className="text-xs font-semibold text-maroon hover:text-gold-600">
                   View all →
@@ -167,7 +214,10 @@ export default function DashboardPage() {
                     <li key={p._id} className="px-5 py-3.5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-800">{p.title}</p>
+                          <p className="truncate text-sm font-semibold text-slate-800">
+                            {p.date && <span className="mr-1.5 text-xs font-bold text-maroon">{fmtDate(p.date).replace(/ \d{4}$/, '')}</span>}
+                            {p.title}
+                          </p>
                           <p className="truncate text-xs text-slate-500">
                             {p.subject?.name}
                             {p.classRoom?.name ? ` · ${p.classRoom.name}` : ''}
@@ -175,9 +225,8 @@ export default function DashboardPage() {
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-                          <Badge tone={p.portionCompleted ? 'green' : 'slate'}>
-                            {p.portionCompleted ? 'Portion done' : 'In progress'}
-                          </Badge>
+                          <Badge tone={kindOf(p.kind).tone}>{kindOf(p.kind).label}</Badge>
+                          {p.status === 'done' && <Badge tone="green">Done</Badge>}
                           {p.notesGiven && <Badge tone="maroon">Notes given</Badge>}
                           {p.examDone && <Badge tone="gold">Exam done</Badge>}
                         </div>
@@ -188,7 +237,7 @@ export default function DashboardPage() {
               ) : (
                 <Empty
                   title="No plans uploaded for this week yet"
-                  hint={user?.role === 'teacher' ? 'Add your weekly plan from the Lesson Plans page.' : undefined}
+                  hint={user?.role === 'teacher' ? 'Plan sessions from the Lesson planner.' : undefined}
                 />
               )}
             </Card>

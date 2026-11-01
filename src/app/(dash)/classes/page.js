@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { PROGRAMS, programLabel, programTone } from '@/lib/programs';
 
 import { useEffect, useState } from 'react';
 import { list, create, update, remove } from '@/lib/client';
 import { PageHeader, Card, Table, Modal, Field, Select, Badge, Alert, Spinner, Confirm, Empty, JoinButton } from '@/components/ui';
 
-const blankClass = { name: '', academicYear: '', onlineClassLink: '', description: '', order: 0 };
+const blankClass = { name: '', academicYear: '', onlineClassLink: '', description: '', order: 0, programType: 'academic' };
 const blankSubject = { name: '', code: '', classRoom: '', teacher: '', onlineClassLink: '' };
 
 export default function ClassesPage() {
@@ -132,6 +133,7 @@ export default function ClassesPage() {
                 }
               >
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-slate-100 px-5 py-3 text-xs text-slate-500">
+                  <Badge tone={programTone(c.programType)}>{programLabel(c.programType)}</Badge>
                   {c.academicYear && <span>Academic year: {c.academicYear}</span>}
                   {c.onlineClassLink ? (
                     <JoinButton url={c.onlineClassLink} label="Open class link" />
@@ -234,8 +236,16 @@ export default function ClassesPage() {
                 onChange={(e) => setClassForm({ ...classForm, name: e.target.value })}
               />
             </Field>
+            <Field label="Programme type" hint={PROGRAMS.find((p) => p.value === (classForm.programType || 'academic'))?.hint}>
+              <Select
+                value={classForm.programType || 'academic'}
+                onChange={(e) => setClassForm({ ...classForm, programType: e.target.value })}
+                options={PROGRAMS.map((p) => ({ value: p.value, label: p.label }))}
+                placeholder=""
+              />
+            </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Academic year">
+              <Field label="Academic year / intake">
                 <input
                   className="input"
                   placeholder="2026–27"

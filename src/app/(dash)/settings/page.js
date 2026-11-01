@@ -40,7 +40,7 @@ export default function SettingsPage() {
     <>
       <PageHeader title="Settings" subtitle="Your account details and password." />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card title="Your account">
           <dl className="space-y-3 text-sm">
             {[

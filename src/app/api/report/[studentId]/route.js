@@ -42,7 +42,11 @@ export async function GET(req, ctxParams) {
       .populate('teacher', 'name')
       .lean();
 
-    const planFilter = { subject: { $in: subjectIds } };
+    const planFilter = {
+      subject: { $in: subjectIds },
+      status: { $nin: ['missed', 'cancelled'] },
+      $or: [{ students: { $size: 0 } }, { students: { $exists: false } }, { students: student._id }],
+    };
     if (from || to) {
       planFilter.weekOf = {};
       if (from) planFilter.weekOf.$gte = from;

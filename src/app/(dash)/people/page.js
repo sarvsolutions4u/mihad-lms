@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import SubjectPicker from '@/components/SubjectPicker';
+import CourseEditor from '@/components/CourseEditor';
+import { api } from '@/lib/client';
+import { PROGRAMS, programLabel, programTone } from '@/lib/programs';
 import { list, create, update, remove } from '@/lib/client';
 import { useSession } from '@/components/SessionProvider';
 import {
@@ -19,6 +22,7 @@ const ROLE_TABS = [
 const blank = (role) => ({
   name: '', email: '', password: '', role, phone: '',
   classRoom: '', admissionNo: '', subjects: [], children: [], active: true,
+  programType: 'academic', courses: [],
 });
 
 export default function PeoplePage() {
@@ -79,12 +83,30 @@ export default function PeoplePage() {
       if (body.role !== 'student') { delete body.classRoom; delete body.admissionNo; }
       if (body.role !== 'parent') delete body.children;
       if (!['teacher', 'student'].includes(body.role)) delete body.subjects;
+      if (body.role !== 'student' || body.programType !== 'short_term') body.courses = [];
+      body.courses = (body.courses || [])
+        .filter((c) => c.subject)
+        .map((c) => ({ ...c, totalHours: Number(c.totalHours) || 0, slots: (c.slots || []).filter((x) => x.day && x.startTime && x.endTime) }));
+      if (!isAdmin) delete body.courses;
 
-      if (_id) await update('users', _id, body);
-      else await create('users', body);
+      const saved = _id ? await update('users', _id, body) : await create('users', body);
+
+      // short-term: create / top up the student's class slots from their course settings
+      let made = 0;
+      if (isAdmin && body.role === 'student' && body.programType === 'short_term') {
+        for (const c of body.courses) {
+          if (!c.totalHours || !c.slots.length) continue;
+          try {
+            const r = await api.post('/api/sessions/generate', { student: saved.item._id, subject: c.subject });
+            made += r.created || 0;
+          } catch (err) {
+            setError(err.message);
+          }
+        }
+      }
 
       setForm(null);
-      setNotice(_id ? 'Account updated' : 'Account created');
+      setNotice(`${_id ? 'Account updated' : 'Account created'}${made ? ` · ${made} class slot${made === 1 ? '' : 's'} scheduled` : ''}`);
       load();
     } catch (err) {
       setError(err.message);
@@ -111,7 +133,21 @@ export default function PeoplePage() {
     ...(tab === 'student'
       ? [
           { key: 'admissionNo', header: 'Admission no', render: (r) => r.admissionNo || '—' },
-          { key: 'classRoom', header: 'Batch', render: (r) => r.classRoom?.name || <Badge tone="amber">No batch</Badge> },
+          {
+            key: 'classRoom',
+            header: 'Batch',
+            render: (r) =>
+              r.classRoom?.name ? (
+                <span>
+                  {r.classRoom.name}
+                  <span className="ml-1.5">
+                    <Badge tone={programTone(r.programType)}>{programLabel(r.programType)}</Badge>
+                  </span>
+                </span>
+              ) : (
+                <Badge tone="amber">No batch</Badge>
+              ),
+          },
           {
             key: 'subjects',
             header: 'Subjects',
@@ -158,6 +194,8 @@ export default function PeoplePage() {
                 classRoom: r.classRoom?._id || r.classRoom || '',
                 subjects: (r.subjects || []).map((s) => s._id || s),
                 children: (r.children || []).map((c) => c._id || c),
+                programType: r.classRoom?.programType || r.programType || 'academic',
+                courses: (r.courses || []).map((c) => ({ ...c, subject: c.subject?._id || c.subject, slots: c.slots || [] })),
               })
             }
           >
@@ -323,13 +361,51 @@ export default function PeoplePage() {
             </div>
 
             {form.role === 'student' && (
+              <div>
+                <span className="label">Programme</span>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {PROGRAMS.map((p) => (
+                    <label
+                      key={p.value}
+                      className={`cursor-pointer rounded-lg border px-3 py-2.5 text-sm ${
+                        (form.programType || 'academic') === p.value ? 'border-maroon bg-maroon-50' : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        className="sr-only"
+                        checked={(form.programType || 'academic') === p.value}
+                        onChange={() => {
+                          const keep = classes.find((c) => c._id === form.classRoom && (c.programType || 'academic') === p.value);
+                          setForm({ ...form, programType: p.value, classRoom: keep ? form.classRoom : '', courses: p.value === 'short_term' ? form.courses || [] : [] });
+                        }}
+                      />
+                      <span className="block font-semibold text-slate-800">{p.label}</span>
+                      <span className="block text-[11px] leading-snug text-slate-500">{p.hint}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {form.role === 'student' && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Class">
+                <Field label="Batch">
                   <Select
                     value={form.classRoom || ''}
-                    onChange={(e) => setForm({ ...form, classRoom: e.target.value })}
-                    options={classes.map((c) => ({ value: c._id, label: c.name }))}
-                    placeholder="Choose a class…"
+                    onChange={(e) => {
+                      const classRoom = e.target.value;
+                      const batchSubjects = subjects.filter((s) => String(s.classRoom?._id || s.classRoom) === classRoom);
+                      const courses =
+                        form.programType === 'short_term' && !(form.courses || []).length && batchSubjects.length
+                          ? [{ subject: batchSubjects[0]._id, totalHours: '', startDate: '', slots: [{ day: 'Monday', startTime: '17:00', endTime: '18:00' }] }]
+                          : form.courses;
+                      setForm({ ...form, classRoom, courses });
+                    }}
+                    options={classes
+                      .filter((c) => (c.programType || 'academic') === (form.programType || 'academic'))
+                      .map((c) => ({ value: c._id, label: c.name }))}
+                    placeholder={classes.some((c) => (c.programType || 'academic') === (form.programType || 'academic')) ? 'Choose a batch…' : 'No batches of this type yet — add one in Classes & Subjects'}
                   />
                 </Field>
                 <Field label="Admission number">
@@ -339,6 +415,21 @@ export default function PeoplePage() {
                     onChange={(e) => setForm({ ...form, admissionNo: e.target.value })}
                   />
                 </Field>
+              </div>
+            )}
+
+            {form.role === 'student' && isAdmin && form.programType === 'short_term' && (
+              <div className="rounded-lg border border-slate-200 p-4">
+                <span className="label">Course hours &amp; class times</span>
+                <p className="mb-3 text-xs text-slate-500">
+                  Hours the student attends are deducted as classes happen. If this student is the only one in a class and is absent, the class moves to the
+                  next slot and nothing is deducted.
+                </p>
+                <CourseEditor
+                  subjects={subjects.filter((s) => !form.classRoom || String(s.classRoom?._id || s.classRoom) === String(form.classRoom))}
+                  value={form.courses || []}
+                  onChange={(courses) => setForm({ ...form, courses })}
+                />
               </div>
             )}
 
