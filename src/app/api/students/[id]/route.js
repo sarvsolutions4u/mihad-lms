@@ -38,7 +38,11 @@ export async function GET(req, ctxParams) {
       .lean();
     if (!student) return fail('Student not found', 404);
 
-    const subjectIds = await subjectIdsForStudent(student);
+    let subjectIds = await subjectIdsForStudent(student);
+    // a trainer only sees this student in their own subjects
+    const isTeacher = session.role === 'teacher';
+    if (isTeacher) subjectIds = subjectIds.filter((sid) => ctx.subjectIds.includes(String(sid)));
+    const inMine = (sid) => !isTeacher || ctx.subjectIds.includes(String(sid?._id || sid));
     const subjects = await Subject.find({ _id: { $in: subjectIds } })
       .populate('classRoom', 'name')
       .populate('teacher', 'name')
@@ -49,9 +53,9 @@ export async function GET(req, ctxParams) {
     const showParents = session.role !== 'student';
 
     const [attendance, marks, submissions, fees, parents] = await Promise.all([
-      Attendance.find({ student: id }).sort({ date: -1 }).limit(200).populate('subject', 'name').lean(),
-      Mark.find({ student: id }).sort({ date: -1, createdAt: -1 }).populate('subject', 'name').lean(),
-      Submission.find({ student: id })
+      Attendance.find({ student: id, ...(isTeacher ? { subject: { $in: ctx.subjectIds } } : {}) }).sort({ date: -1 }).limit(200).populate('subject', 'name').lean(),
+      Mark.find({ student: id, ...(isTeacher ? { subject: { $in: ctx.subjectIds } } : {}) }).sort({ date: -1, createdAt: -1 }).populate('subject', 'name').lean(),
+      Submission.find({ student: id, ...(isTeacher ? { task: { $in: ctx.taskIds } } : {}) })
         .sort('-submittedAt')
         .populate({ path: 'task', select: 'title type deadline maxMarks subject', populate: { path: 'subject', select: 'name' } })
         .lean(),
@@ -74,7 +78,7 @@ export async function GET(req, ctxParams) {
 
     const today = todayISO();
     const [courses, upcoming] = await Promise.all([
-      courseProgress(student, today),
+      courseProgress(student, today).then((cs) => cs.filter((c) => inMine(c.subject))),
       LessonPlan.find({
         subject: { $in: subjectIds },
         date: { $gte: today },

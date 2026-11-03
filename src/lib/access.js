@@ -1,11 +1,12 @@
-import { User, Subject } from '@/models';
+import { User, Subject, Task } from '@/models';
 import { enrolledStudentsFilter, subjectIdsForStudent } from '@/lib/enrol';
 
 /**
  * Resolve everything we need to scope queries for the signed-in person:
  *   admin   -> sees everything
- *   teacher -> the subjects assigned to them, their classes, and the students
- *              enrolled in those subjects
+ *   teacher -> ONLY the subjects assigned to them and the students enrolled in
+ *              those subjects. Trainers never see each other's plans, files,
+ *              assignments, submissions, marks or attendance.
  *   student -> only the subjects they are enrolled in (+ their own record)
  *   parent  -> their children, and the subjects their children are enrolled in
  *
@@ -20,6 +21,7 @@ export async function getActorContext(session) {
     homeClassIds: [],
     subjectIds: [],
     studentIds: [],
+    taskIds: [],
   };
 
   if (session.role === 'admin') return ctx;
@@ -29,8 +31,12 @@ export async function getActorContext(session) {
     ctx.subjectIds = subjects.map((s) => String(s._id));
     ctx.classIds = [...new Set(subjects.map((s) => String(s.classRoom)).filter(Boolean))];
     if (subjects.length) {
-      const students = await User.find(enrolledStudentsFilter(subjects)).select('_id').lean();
+      const [students, tasks] = await Promise.all([
+        User.find(enrolledStudentsFilter(subjects)).select('_id').lean(),
+        Task.find({ subject: { $in: ctx.subjectIds } }).select('_id').lean(),
+      ]);
       ctx.studentIds = students.map((s) => String(s._id));
+      ctx.taskIds = tasks.map((t) => String(t._id));
     }
     return ctx;
   }
@@ -85,7 +91,7 @@ export const POLICY = {
     write: ['admin'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { $or: [{ teacher: ctx.uid }, { classRoom: { $in: ctx.classIds } }] };
+      if (ctx.role === 'teacher') return { teacher: ctx.uid };
       return { _id: { $in: ctx.subjectIds } };
     },
   },
@@ -97,7 +103,7 @@ export const POLICY = {
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
       if (ctx.role === 'teacher') {
-        return { $or: [{ _id: ctx.uid }, { _id: { $in: ctx.studentIds } }, { role: 'teacher' }] };
+        return { $or: [{ _id: ctx.uid }, { _id: { $in: ctx.studentIds } }] };
       }
       if (ctx.role === 'student') return { _id: ctx.uid };
       // parent: self + own children
@@ -110,7 +116,7 @@ export const POLICY = {
     write: ['admin'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { classRoom: { $in: ctx.classIds } };
+      if (ctx.role === 'teacher') return { subject: { $in: ctx.subjectIds } };
       return { subject: { $in: ctx.subjectIds } };
     },
   },
@@ -120,7 +126,7 @@ export const POLICY = {
     write: ['admin'], // teachers mark through /api/attendance/bulk (checked per subject)
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { $or: [{ subject: { $in: ctx.subjectIds } }, { student: { $in: ctx.studentIds } }] };
+      if (ctx.role === 'teacher') return { subject: { $in: ctx.subjectIds } };
       return { student: { $in: ctx.studentIds } };
     },
   },
@@ -137,7 +143,7 @@ export const POLICY = {
     write: ['admin', 'teacher'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { $or: [{ teacher: ctx.uid }, { subject: { $in: ctx.subjectIds } }] };
+      if (ctx.role === 'teacher') return { subject: { $in: ctx.subjectIds } };
       // learners: their subjects' sessions, except one-to-one sessions of other students
       return {
         $and: [
@@ -163,7 +169,7 @@ export const POLICY = {
     write: ['admin', 'teacher'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { classRoom: { $in: ctx.classIds } };
+      if (ctx.role === 'teacher') return { $or: [{ subject: { $in: ctx.subjectIds } }, { subject: null, uploadedBy: ctx.uid }] };
       return learnerSubjectScope(ctx);
     },
   },
@@ -173,7 +179,7 @@ export const POLICY = {
     write: ['admin', 'teacher'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { classRoom: { $in: ctx.classIds } };
+      if (ctx.role === 'teacher') return { $or: [{ subject: { $in: ctx.subjectIds } }, { subject: null, createdBy: ctx.uid }] };
       return { subject: { $in: ctx.subjectIds } };
     },
   },
@@ -183,7 +189,7 @@ export const POLICY = {
     write: ['admin', 'teacher', 'student'],
     scope: (ctx) => {
       if (ctx.role === 'admin') return {};
-      if (ctx.role === 'teacher') return { student: { $in: ctx.studentIds } };
+      if (ctx.role === 'teacher') return { task: { $in: ctx.taskIds } };
       return { student: { $in: ctx.studentIds } };
     },
   },

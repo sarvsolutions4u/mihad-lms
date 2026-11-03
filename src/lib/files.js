@@ -117,9 +117,33 @@ export async function deleteFile(id) {
   if (found) await found.bucket.delete(id);
 }
 
+async function teacherHasFileInSubjects(session, fileId) {
+  if (!fileId) return false;
+  await dbConnect();
+  const { Subject, Resource, Task, LessonPlan, Submission } = await import('@/models');
+  const subjects = (await Subject.find({ teacher: session.uid }).select('_id').lean()).map((x) => x._id);
+  if (!subjects.length) return false;
+  const url = new RegExp(`^/api/files/${String(fileId).replace(/[^a-f0-9]/g, '')}`);
+  const tasks = await Task.find({ subject: { $in: subjects } }).select('_id').lean();
+  const hits = await Promise.all([
+    Resource.exists({ subject: { $in: subjects }, url }),
+    Task.exists({ subject: { $in: subjects }, attachmentUrl: url }),
+    LessonPlan.exists({ subject: { $in: subjects }, 'attachments.url': url }),
+    Submission.exists({ task: { $in: tasks.map((t) => t._id) }, url }),
+  ]);
+  return hits.some(Boolean);
+}
+
 /** Who may open a file: fee files only for admins and that student's parents. */
 export async function canOpenFile(session, meta = {}) {
-  if (meta.purpose !== 'fee') return true; // course material: anyone signed in
+  if (meta.purpose !== 'fee') {
+    // trainers' material stays with each trainer: another teacher can't open it
+    // — unless it is attached to one of this trainer's own subjects (e.g. a subject handed over).
+    if (session.role === 'teacher' && meta.role === 'teacher' && meta.uploadedBy && String(meta.uploadedBy) !== String(session.uid)) {
+      return teacherHasFileInSubjects(session, meta._id);
+    }
+    return true; // otherwise reachable only through the (scoped) lists
+  }
   if (session.role === 'admin') return true;
   if (session.role === 'parent') {
     await dbConnect();

@@ -16,6 +16,10 @@ export const maxDuration = 60;
  *
  * Fee files are private: only admins and that student's parents can open them.
  */
+import { logActivity } from '@/lib/activity';
+
+const PURPOSE_LABEL = { general: 'Course material', submission: 'Student work', fee: 'Fee document', receipt: 'Fee receipt' };
+
 export async function POST(req) {
   try {
     const session = await requireSession(['admin', 'teacher', 'student']);
@@ -34,6 +38,7 @@ export async function POST(req) {
     }
 
     const saved = await saveFile(file, meta);
+    await logActivity({ uid: session.uid, role: session.role, type: 'upload', name: saved.name, detail: PURPOSE_LABEL[purpose] || purpose, req });
     return ok({ url: saved.url, fileName: saved.name, size: saved.size, contentType: saved.contentType, watermark: saved.watermark || '' });
   } catch (err) {
     return handleError(err);

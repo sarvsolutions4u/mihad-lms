@@ -12,6 +12,7 @@ import { statusTone } from '@/components/AttendanceRegister';
 import { classLinkFor } from '@/lib/links';
 import SubjectPicker from '@/components/SubjectPicker';
 import CourseProgress from '@/components/CourseProgress';
+import { PersonActivity } from '@/components/Activity';
 import { SessionChip } from '@/components/Sessions';
 import { programLabel, programTone } from '@/lib/programs';
 
@@ -55,6 +56,7 @@ export default function StudentPage() {
     { key: 'marks', label: 'Marks', count: data.marks.length },
     { key: 'work', label: 'Submitted work', count: data.submissions.length },
     ...(fees ? [{ key: 'fees', label: 'Fees', count: fees.length }] : []),
+    ...(['admin', 'teacher'].includes(user?.role) ? [{ key: 'activity', label: 'Activity' }] : []),
   ];
 
   return (
@@ -189,6 +191,12 @@ export default function StudentPage() {
             </Card>
           )}
           <Tabs tabs={tabs} value={tab} onChange={setTab} />
+
+          {tab === 'activity' && (
+            <div className="card p-5">
+              <PersonActivity userId={student._id} compact />
+            </div>
+          )}
 
           {tab === 'upcoming' && (
             <Card bodyClass="space-y-2 p-4">

@@ -31,6 +31,7 @@ const PATHS = {
   video: <><rect x="3" y="6" width="13" height="12" rx="2" /><path d="m16 10 5-3v10l-5-3" /></>,
   book: <><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z" /><path d="M4 19a2 2 0 0 1 2-2h13" /></>,
   bell: <><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z" /><path d="M10 20a2 2 0 0 0 4 0" /></>,
+  activity: <><path d="M3 12h4l3-8 4 16 3-8h4" /></>,
   upload: <><path d="M12 20V9m0 0-4 4m4-4 4 4M5 4h14" /></>,
 };
 

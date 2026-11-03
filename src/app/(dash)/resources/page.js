@@ -226,12 +226,13 @@ export default function ResourcesPage() {
               </Field>
               <Field label="Subject">
                 <Select
+                  required={user?.role === 'teacher'}
                   value={form.subject}
                   onChange={(e) => setForm({ ...form, subject: e.target.value })}
                   options={subjects
                     .filter((s) => String(s.classRoom?._id || s.classRoom) === String(form.classRoom))
                     .map((s) => ({ value: s._id, label: s.name }))}
-                  placeholder="Whole class"
+                  placeholder={user?.role === 'teacher' ? 'Choose…' : 'Whole class'}
                 />
               </Field>
               <Field label="Type">

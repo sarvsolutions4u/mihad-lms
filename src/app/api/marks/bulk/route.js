@@ -22,7 +22,7 @@ export async function POST(req) {
 
     const plan = await LessonPlan.findById(lessonPlanId).lean();
     if (!plan) return fail('Lesson plan not found', 404);
-    if (session.role === 'teacher' && String(plan.teacher) !== ctx.uid) {
+    if (session.role === 'teacher' && !ctx.subjectIds.includes(String(plan.subject))) {
       return fail('This lesson plan belongs to another teacher', 403);
     }
 

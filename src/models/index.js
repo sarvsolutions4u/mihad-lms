@@ -91,6 +91,7 @@ const UserSchema = new Schema(
     children: [{ type: ObjectId, ref: 'User', index: true }],
 
     lastLoginAt: Date,
+    lastSeenAt: Date,
   },
   { timestamps: true }
 );
@@ -420,6 +421,46 @@ const StoredFileSchema = new Schema(
 );
 
 /* ------------------------------------------------------------------ */
+/* Activity — sign-ins, uploads, downloads, submissions, active time   */
+/* ------------------------------------------------------------------ */
+
+export const ACTIVITY_TYPES = ['login', 'logout', 'upload', 'post', 'submit', 'download'];
+
+const ActivitySchema = new Schema(
+  {
+    user: { type: ObjectId, ref: 'User', required: true },
+    role: String,
+    type: { type: String, enum: ACTIVITY_TYPES, required: true },
+    at: { type: Date, default: Date.now },
+    name: { type: String, default: '' }, // file name or title
+    detail: { type: String, default: '' }, // e.g. "Assignment", "Notes", purpose
+    fileId: String,
+    fileOwner: { type: ObjectId, ref: 'User' }, // who uploaded the file (downloads)
+    subject: { type: ObjectId, ref: 'Subject' },
+    device: { type: String, default: '' },
+  },
+  { versionKey: false }
+);
+ActivitySchema.index({ user: 1, at: -1 });
+ActivitySchema.index({ at: -1 });
+ActivitySchema.index({ at: 1 }, { expireAfterSeconds: 400 * 24 * 3600, name: 'ttl_400d' }); // keep ~13 months
+
+/** Minutes a person was active on the portal, per day (Dubai date). */
+const DailyActiveSchema = new Schema(
+  {
+    user: { type: ObjectId, ref: 'User', required: true },
+    role: String,
+    date: { type: String, required: true },
+    minutes: { type: Number, default: 0 },
+    first: Date,
+    last: Date,
+  },
+  { versionKey: false }
+);
+DailyActiveSchema.index({ user: 1, date: 1 }, { unique: true });
+DailyActiveSchema.index({ date: 1 });
+
+/* ------------------------------------------------------------------ */
 
 export const User = models.User || model('User', UserSchema);
 export const ClassRoom = models.ClassRoom || model('ClassRoom', ClassRoomSchema);
@@ -434,6 +475,8 @@ export const Task = models.Task || model('Task', TaskSchema);
 export const Submission = models.Submission || model('Submission', SubmissionSchema);
 export const Announcement = models.Announcement || model('Announcement', AnnouncementSchema);
 export const StoredFile = models.StoredFile || model('StoredFile', StoredFileSchema);
+export const Activity = models.Activity || model('Activity', ActivitySchema);
+export const DailyActive = models.DailyActive || model('DailyActive', DailyActiveSchema);
 
 export const MODELS = {
   users: User,

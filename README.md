@@ -34,6 +34,7 @@ roughly 1,000+ typical PDFs fit comfortably. For videos, paste a YouTube / Drive
 | Notes, question papers, resources | full | own subjects | enrolled subjects | view |
 | Fees, payments, receipts | full + overdue alerts | — | — | **view & download receipts** |
 | Remove a student | yes | — | — | — |
+| Activity logs (sign-ins, active time, uploads, files opened) | everyone | own students only | — | — |
 | Announcements | post to any audience | receive | receive | receive |
 
 ### Subject enrolment
@@ -42,6 +43,26 @@ A student with **no subjects chosen** is enrolled in every subject of their batc
 picks subjects (People → Edit, the student's page → *Change subjects*, or during bulk upload), the
 student and their parent see **only those subjects** — their plans, assignments, notes, papers and
 timetable — and each subject's teacher sees only the students enrolled in it.
+
+### Trainers are kept separate
+
+A trainer sees **only their own subjects**: their students, lesson plans, assignments and the
+submissions to them, notes and files, marks, attendance, timetable slots and progress reports.
+They never see another trainer's subjects, files or account — even for a student they share, the
+student page shows only the trainer's own subjects. A file uploaded by one trainer cannot be
+opened by another (unless it sits in a subject that has been handed over to them). Every item a
+trainer posts must belong to one of their subjects. The admin sees everything.
+
+### Activity logs
+
+*Activity Logs* (admin and trainers) shows, per person: online now / last seen, last sign-in,
+**active time** today and over 7/30 days, sign-ins, uploads and posts, work submitted and files
+opened — plus a day-by-day chart and a full log (sign-in/out with device, uploads, assignments and
+notes posted, submissions, files opened). Active time is counted from a once-a-minute signal sent
+while a portal tab is open, visible and in use (5 minutes with no input counts as idle). Trainers see
+only the students in their subjects, and only what those students did in the trainer's subjects;
+the admin sees everyone, including trainers. Students' pages have an *Activity* tab too.
+Logs are kept for about 13 months.
 
 ### Programmes and the lesson planner
 

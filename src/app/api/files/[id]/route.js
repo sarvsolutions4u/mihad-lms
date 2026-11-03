@@ -6,6 +6,7 @@ import { findFile, isInline, canOpenFile, deleteFile } from '@/lib/files';
 import { presign, disposition, headObject, getObjectBuffer, putObject, listObjects, deleteObject } from '@/lib/r2';
 import { stampPdf, isPdf, learnerLine } from '@/lib/watermark';
 import { fail, ok, handleError, todayISO } from '@/lib/api';
+import { logActivity } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -58,6 +59,17 @@ export async function GET(req, ctxParams) {
     if (meta) {
       if (meta.status !== 'ready') return fail('This upload did not finish', 404);
       if (!(await canOpenFile(session, meta))) return fail('You do not have access to this file', 403);
+      await logActivity({
+        uid: session.uid,
+        role: session.role,
+        type: 'download',
+        name: meta.name,
+        detail: wantsDownload ? 'Downloaded' : 'Opened',
+        fileId: String(meta._id),
+        fileOwner: meta.uploadedBy,
+        req,
+        dedupeMins: 10,
+      });
       const kind = wantsDownload || !isInline(meta.contentType) ? 'attachment' : 'inline';
       let key = meta.key;
       if (LEARNER.includes(session.role) && meta.purpose === 'general' && isPdf(meta.contentType, meta.name) && meta.watermark !== 'protected') {
@@ -74,6 +86,17 @@ export async function GET(req, ctxParams) {
     if (!found) return fail('File not found', 404);
     const { doc, bucket } = found;
     if (!(await canOpenFile(session, doc.metadata))) return fail('You do not have access to this file', 403);
+    await logActivity({
+      uid: session.uid,
+      role: session.role,
+      type: 'download',
+      name: doc.filename,
+      detail: wantsDownload ? 'Downloaded' : 'Opened',
+      fileId: String(id),
+      fileOwner: doc.metadata?.uploadedBy,
+      req,
+      dedupeMins: 10,
+    });
 
     const chunks = [];
     await new Promise((resolve, reject) => {

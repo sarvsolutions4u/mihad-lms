@@ -19,6 +19,7 @@ const NAV = [
   { href: '/announcements', label: 'Announcements', icon: 'megaphone', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/fees', label: 'Fees', icon: 'wallet', roles: ['admin', 'parent'] },
   { href: '/people', label: 'People', icon: 'users', roles: ['admin', 'teacher'] },
+  { href: '/activity', label: 'Activity Logs', icon: 'activity', roles: ['admin', 'teacher'] },
   { href: '/classes', label: 'Classes & Subjects', icon: 'school', roles: ['admin'] },
   { href: '/settings', label: 'Settings', icon: 'cog', roles: ['admin', 'teacher', 'student', 'parent'] },
 ];
@@ -40,6 +41,28 @@ export default function Shell({ children }) {
       .then((d) => setFeeAlerts(d?.ok ? d.count : 0))
       .catch(() => {});
   }, [user?.role, pathname]);
+
+  // active-time heartbeat: once a minute while the tab is open, visible and in use
+  useEffect(() => {
+    if (!user) return;
+    let lastInput = Date.now();
+    const touch = () => {
+      lastInput = Date.now();
+    };
+    const events = ['mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach((e) => window.addEventListener(e, touch, { passive: true }));
+    const ping = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastInput > 5 * 60 * 1000) return; // idle for 5+ minutes
+      fetch('/api/activity/ping', { method: 'POST', keepalive: true }).catch(() => {});
+    };
+    ping();
+    const t = setInterval(ping, 60 * 1000);
+    return () => {
+      clearInterval(t);
+      events.forEach((e) => window.removeEventListener(e, touch));
+    };
+  }, [user]);
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });

@@ -37,7 +37,8 @@ export async function GET(req, ctxParams) {
     const to = searchParams.get('to') || '';
 
     // only the subjects this student is enrolled in
-    const subjectIds = await subjectIdsForStudent(student);
+    let subjectIds = await subjectIdsForStudent(student);
+    if (session.role === 'teacher') subjectIds = subjectIds.filter((sid) => ctx.subjectIds.includes(String(sid)));
     const subjects = await Subject.find({ _id: { $in: subjectIds } })
       .populate('teacher', 'name')
       .lean();
@@ -55,8 +56,8 @@ export async function GET(req, ctxParams) {
 
     const [plans, marks, attendance] = await Promise.all([
       LessonPlan.find(planFilter).sort('weekOf').lean(),
-      Mark.find({ student: studentId }).populate('lessonPlan', 'title weekOf').lean(),
-      Attendance.find({ student: studentId }).lean(),
+      Mark.find({ student: studentId, subject: { $in: subjectIds } }).populate('lessonPlan', 'title weekOf').lean(),
+      Attendance.find({ student: studentId, ...(session.role === 'teacher' ? { subject: { $in: subjectIds } } : {}) }).lean(),
     ]);
 
     const bySubject = subjects.map((s) => {

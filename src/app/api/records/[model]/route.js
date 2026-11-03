@@ -6,6 +6,7 @@ import { cleanLinks } from '@/lib/links';
 import { requireSession, hashPassword } from '@/lib/auth';
 import { getActorContext, POLICY, POPULATE, stripProtected, selectFor } from '@/lib/access';
 import { ok, fail, handleError } from '@/lib/api';
+import { logActivity } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -155,7 +156,9 @@ export async function POST(req, ctxParams) {
     }
 
     if (['marks', 'tasks', 'resources'].includes(key) && session.role === 'teacher') {
-      if (body.subject && !ctx.subjectIds.includes(String(body.subject))) {
+      // trainers' work is kept per subject, so every item must belong to one of theirs
+      if (!body.subject) return fail('Choose one of your subjects', 422);
+      if (!ctx.subjectIds.includes(String(body.subject))) {
         return fail('You are not assigned to this subject', 403);
       }
     }
@@ -172,6 +175,21 @@ export async function POST(req, ctxParams) {
     if (Model.schema.paths.markedBy && !body.markedBy) body.markedBy = ctx.uid;
 
     const doc = await Model.create(body);
+
+    if (key === 'submissions') {
+      const task = await MODELS.tasks.findById(doc.task).select('title subject').lean();
+      await logActivity({ uid: ctx.uid, role: session.role, type: 'submit', name: task?.title || 'Work', detail: 'Submitted work', subject: task?.subject, req });
+    } else if (key === 'tasks' || key === 'resources') {
+      await logActivity({
+        uid: ctx.uid,
+        role: session.role,
+        type: 'post',
+        name: doc.title,
+        detail: key === 'tasks' ? (doc.type === 'worksheet' ? 'Worksheet' : 'Assignment') : 'Notes / resource',
+        subject: doc.subject,
+        req,
+      });
+    }
     return ok({ item: doc.toObject() }, { status: 201 });
   } catch (err) {
     return handleError(err);

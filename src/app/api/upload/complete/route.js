@@ -9,6 +9,10 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /** Step 2 of an upload: confirm the file really arrived in R2. body: { id } */
+import { logActivity } from '@/lib/activity';
+
+const PURPOSE_LABEL = { general: 'Course material', submission: 'Student work', fee: 'Fee document', receipt: 'Fee receipt' };
+
 export async function POST(req) {
   try {
     const session = await requireSession(['admin', 'teacher', 'student']);
@@ -49,6 +53,15 @@ export async function POST(req) {
 
       meta.status = 'ready';
       await meta.save();
+      await logActivity({
+        uid: session.uid,
+        role: session.role,
+        type: 'upload',
+        name: meta.name,
+        detail: PURPOSE_LABEL[meta.purpose] || meta.purpose,
+        fileId: String(meta._id),
+        req,
+      });
     }
 
     return ok({

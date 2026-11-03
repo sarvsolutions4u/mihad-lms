@@ -2,6 +2,7 @@ import { dbConnect } from '@/lib/db';
 import { User } from '@/models';
 import { verifyPassword, createSession } from '@/lib/auth';
 import { ok, fail, handleError } from '@/lib/api';
+import { logActivity } from '@/lib/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,9 @@ export async function POST(req) {
 
     await createSession(user);
     user.lastLoginAt = new Date();
+    user.lastSeenAt = new Date();
     await user.save();
+    await logActivity({ uid: user._id, role: user.role, type: 'login', req });
 
     return ok({
       user: { id: String(user._id), name: user.name, email: user.email, role: user.role },

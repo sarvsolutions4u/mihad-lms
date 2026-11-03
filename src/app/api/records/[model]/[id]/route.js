@@ -82,7 +82,7 @@ export async function PATCH(req, ctxParams) {
       if (body.email) body.email = String(body.email).toLowerCase().trim();
     }
 
-    if (key === 'lessonplans' && session.role === 'teacher' && String(doc.teacher) !== ctx.uid) {
+    if (key === 'lessonplans' && session.role === 'teacher' && !ctx.subjectIds.includes(String(doc.subject))) {
       return fail('This lesson plan belongs to another teacher', 403);
     }
 
@@ -130,7 +130,7 @@ export async function DELETE(req, ctxParams) {
       if (session.role !== 'admin') return fail('Only an admin can remove an account', 403);
       if (String(doc._id) === ctx.uid) return fail('You cannot delete your own account', 400);
     }
-    if (key === 'lessonplans' && session.role === 'teacher' && String(doc.teacher) !== ctx.uid) {
+    if (key === 'lessonplans' && session.role === 'teacher' && !ctx.subjectIds.includes(String(doc.subject))) {
       return fail('This lesson plan belongs to another teacher', 403);
     }
 
