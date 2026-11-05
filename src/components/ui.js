@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Icon from './Icon';
 import { normalizeUrl, meetingApp, embedFor } from '@/lib/links';
 import { ACCEPT, MAX_FILE_MB, isStoredFile, downloadUrl, fmtSize } from '@/lib/fileTypes';
+import { FileViewerModal } from './FileViewer';
+import { useSession } from './SessionProvider';
 
 /* ---------------------------------------------------------------- */
 /* Brand mark — the official Mihad Training logo.                    */
@@ -540,6 +542,8 @@ export function MediaViewer({ url, title, onClose, video = false }) {
 /** Open / Download for a stored file, or a Watch/View button for Drive & YouTube links. */
 export function FileLink({ url, name, size, compact = false, video = false }) {
   const [viewing, setViewing] = useState(false);
+  const { user } = useSession();
+  const staff = ['admin', 'teacher'].includes(user?.role);
   if (!url) return null;
   const href = normalizeUrl(url);
   const stored = isStoredFile(href);
@@ -563,6 +567,27 @@ export function FileLink({ url, name, size, compact = false, video = false }) {
           <span className="truncate">{isVideo ? `Watch: ${label}` : label}</span>
         </button>
         {viewing && <MediaViewer url={href} title={label} video={isVideo} onClose={() => setViewing(false)} />}
+      </>
+    );
+  }
+
+  if (stored) {
+    // opens inside the portal; students & parents get no download button (the viewer offers one only where allowed)
+    return (
+      <>
+        <span className={`inline-flex min-w-0 items-center gap-1.5 ${compact ? '' : 'rounded-lg border border-slate-200 bg-white px-2.5 py-1.5'}`}>
+          <Icon name="file" className="h-3.5 w-3.5 shrink-0 text-maroon" />
+          <button type="button" onClick={() => setViewing(true)} className="truncate text-left text-xs font-semibold text-maroon hover:underline" title={`View ${label}`}>
+            {label}
+          </button>
+          {size ? <span className="shrink-0 text-[10px] text-slate-400">{fmtSize(size)}</span> : null}
+          {staff && (
+            <a href={downloadUrl(href)} className="shrink-0 rounded p-0.5 text-slate-500 hover:bg-slate-100 hover:text-maroon" title="Download" aria-label={`Download ${label}`}>
+              <Icon name="download" className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </span>
+        {viewing && <FileViewerModal url={href} name={label} onClose={() => setViewing(false)} />}
       </>
     );
   }

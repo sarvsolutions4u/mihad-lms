@@ -92,5 +92,5 @@ export function uploaderLine(session) {
 /** Line stamped on a student's / parent's copy. */
 export function learnerLine(user) {
   const who = `${user?.name || 'Student'}${user?.admissionNo ? ` (${user.admissionNo})` : ''}`;
-  return `Downloaded by ${who} | ${stampDate()} | For personal study only`;
+  return `Issued to ${who} | ${stampDate()} | For personal study only - do not share`;
 }

@@ -114,9 +114,32 @@ older files keep working after R2 is switched on.
   YouTube links play the same way. Other Drive files (PDF, Docs, Slides) open in the same viewer.
 - **PDF watermarks:** PDFs a trainer uploads are stamped on every page with a light diagonal
   "AL MIHAD TRAINING" and *Trainer: <name> | Al Mihad Training Centre*. When a student or parent opens
-  or downloads one, they get their own copy that also says *Downloaded by <name> (<admission no>) |
-  <date>*. Password-protected PDFs can't be stamped and are left as they are (the trainer is told).
+  opens one, they get their own copy that also says *Issued to <name> (<admission no>) | <date>*.
+  Password-protected PDFs can't be stamped and are left as they are (the trainer is told).
   Student work and fee receipts are never watermarked. PDFs linked from Google Drive are not stamped.
+
+### Viewing files inside the portal (view-only for students)
+
+Every uploaded file opens in the portal's own viewer instead of a new tab:
+
+| File | Shown as | Students & parents |
+|---|---|---|
+| PDF | pages drawn in the viewer (pdf.js, `/public/pdfjs`), zoom, page count | view-only, their name on every page |
+| Word (.docx) | converted to a readable page | view-only, their name across the page |
+| Video / audio (mp4, mp3) | built-in player | view-only, no download button |
+| Pictures | in the viewer | view-only |
+| PowerPoint, Excel, older .doc, zip | can't be shown in a browser | can download (ask trainers to upload PDFs instead) |
+
+- **View-only** applies to course material from the office and trainers. Students' own submissions
+  and fee receipts stay downloadable. Admin and trainers always have a *Download* button.
+- No download/print buttons, right-click, Ctrl+S / Ctrl+P and printing are blocked in the viewer,
+  and `?download=1` is refused for learners. Old direct links (`/api/files/<id>`) open the viewer page
+  `/view/<id>`. This stops casual saving; a screenshot can't be prevented, which is what the name
+  stamp is for.
+- The viewer loads PDFs straight from R2 with a 5-minute link (needs `GET` in the bucket's CORS
+  policy, as above). If the browser blocks that, files up to 4 MB load through the portal instead.
+- Server-side writes to R2 (watermarked copies) send an explicit `Content-Length` — R2 refuses
+  chunked uploads with **411**.
 
 ### Fee alerts
 

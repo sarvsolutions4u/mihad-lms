@@ -83,8 +83,21 @@ export async function headObject(key) {
   return { size: Number(res.headers.get('content-length') || 0), contentType: res.headers.get('content-type') || '' };
 }
 
+/**
+ * Server-side write (watermarked PDFs, the storage test).
+ * R2 refuses uploads without a Content-Length ("411"). Inside Next.js a signed
+ * Request object is re-sent as a chunked stream, which drops that header — so
+ * sign a URL instead and send the bytes with an explicit length.
+ */
 export async function putObject(key, body, contentType = 'application/octet-stream') {
-  const res = await r2().fetch(objectUrl(key), { method: 'PUT', body, headers: { 'Content-Type': contentType } });
+  const bytes = typeof body === 'string' ? Buffer.from(body) : Buffer.from(body.buffer ? new Uint8Array(body.buffer, body.byteOffset, body.byteLength) : body);
+  const url = await presign('PUT', key, { expires: 300 });
+  const res = await fetch(url, {
+    method: 'PUT',
+    body: bytes,
+    headers: { 'Content-Type': contentType, 'Content-Length': String(bytes.length) },
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error(`Storage upload failed (${res.status})`);
 }
 
