@@ -42,7 +42,7 @@ table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border:1px solid #
 img{max-width:100%;height:auto}
 .issued{max-width:820px;margin:0 auto;padding:10px 22px 0;font-size:11px;color:#7a121d;opacity:.7}
 .mark{position:fixed;inset:-100%;transform:rotate(-30deg);font:600 15px/3.6 system-ui,sans-serif;overflow:hidden;color:#7a121d;opacity:.06;pointer-events:none;z-index:2;word-spacing:6px}
-${issuedTo ? 'body{-webkit-user-select:none;user-select:none}@media print{body{display:none}}' : ''}
+${issuedTo ? '@media print{body{display:none}}::selection{background:rgba(201,162,39,.35)}' : ''}
 </style></head><body>${mark}<main>${body || '<p>This document is empty.</p>'}</main></body></html>`;
 }
 
@@ -227,6 +227,7 @@ export async function GET(req, ctxParams) {
           size: f.size,
           contentType: f.contentType,
           kind: f.kind,
+          purpose: f.purpose,
           url: f.kind === 'other' ? '' : url,
           fallbackUrl: f.store === 'r2' && canStream && !['other', 'doc'].includes(f.kind) ? streamUrl : '',
           canDownload: !viewOnly,

@@ -408,7 +408,7 @@ const StoredFileSchema = new Schema(
     name: { type: String, required: true, trim: true },
     size: { type: Number, default: 0 },
     contentType: { type: String, default: 'application/octet-stream' },
-    purpose: { type: String, default: 'general' }, // general | fee | submission
+    purpose: { type: String, default: 'general' }, // general | fee | submission | message
     student: { type: ObjectId, ref: 'User' }, // for fee files
     uploadedBy: { type: ObjectId, ref: 'User' },
     role: { type: String },
@@ -424,7 +424,7 @@ const StoredFileSchema = new Schema(
 /* Activity — sign-ins, uploads, downloads, submissions, active time   */
 /* ------------------------------------------------------------------ */
 
-export const ACTIVITY_TYPES = ['login', 'logout', 'upload', 'post', 'submit', 'download'];
+export const ACTIVITY_TYPES = ['login', 'logout', 'upload', 'post', 'submit', 'download', 'doubt', 'message'];
 
 const ActivitySchema = new Schema(
   {
@@ -461,6 +461,61 @@ DailyActiveSchema.index({ user: 1, date: 1 }, { unique: true });
 DailyActiveSchema.index({ date: 1 });
 
 /* ------------------------------------------------------------------ */
+/* Messages — doubts and conversations                                 */
+/*   learner side : a student or parent (learner), about `student`     */
+/*   staff side   : the subject's trainer (`teacher`) or the office    */
+/*   staff-only   : a trainer ↔ the office (no learner)                */
+/* Admins can read every thread.                                       */
+/* ------------------------------------------------------------------ */
+
+export const THREAD_KINDS = ['doubt', 'message'];
+
+const ThreadSchema = new Schema(
+  {
+    kind: { type: String, enum: THREAD_KINDS, default: 'message' },
+    title: { type: String, trim: true, default: '' },
+    learner: { type: ObjectId, ref: 'User', index: true }, // student or parent in the conversation
+    student: { type: ObjectId, ref: 'User', index: true }, // the student it is about
+    teacher: { type: ObjectId, ref: 'User', index: true }, // the trainer in it (empty = office)
+    toOffice: { type: Boolean, default: false },
+    subject: { type: ObjectId, ref: 'Subject' },
+    classRoom: { type: ObjectId, ref: 'ClassRoom' },
+    createdBy: { type: ObjectId, ref: 'User' },
+    status: { type: String, enum: ['open', 'resolved'], default: 'open', index: true },
+    resolvedBy: { type: ObjectId, ref: 'User' },
+    resolvedAt: Date,
+    lastMessageAt: { type: Date, default: Date.now, index: true },
+    lastFrom: { type: ObjectId, ref: 'User' },
+    lastText: { type: String, default: '' },
+    count: { type: Number, default: 0 },
+    reads: [{ _id: false, user: { type: ObjectId, ref: 'User' }, at: Date }],
+  },
+  { timestamps: true }
+);
+
+const MessageSchema = new Schema(
+  {
+    thread: { type: ObjectId, ref: 'Thread', required: true, index: true },
+    from: { type: ObjectId, ref: 'User', required: true },
+    role: String,
+    text: { type: String, default: '', maxlength: 4000 },
+    // the part of the course material the doubt is about
+    ref: {
+      fileId: String,
+      fileName: String,
+      link: String, // Google Drive / YouTube link the doubt is about
+      page: Number, // PDF page
+      seconds: Number, // video position
+      quote: { type: String, maxlength: 2000 }, // selected text
+      image: String, // snipped area (/api/files/<id>)
+    },
+    attachments: [{ _id: false, url: String, name: String, size: Number }],
+  },
+  { timestamps: true }
+);
+MessageSchema.index({ thread: 1, createdAt: 1 });
+
+/* ------------------------------------------------------------------ */
 
 export const User = models.User || model('User', UserSchema);
 export const ClassRoom = models.ClassRoom || model('ClassRoom', ClassRoomSchema);
@@ -477,6 +532,8 @@ export const Announcement = models.Announcement || model('Announcement', Announc
 export const StoredFile = models.StoredFile || model('StoredFile', StoredFileSchema);
 export const Activity = models.Activity || model('Activity', ActivitySchema);
 export const DailyActive = models.DailyActive || model('DailyActive', DailyActiveSchema);
+export const Thread = models.Thread || model('Thread', ThreadSchema);
+export const Message = models.Message || model('Message', MessageSchema);
 
 export const MODELS = {
   users: User,

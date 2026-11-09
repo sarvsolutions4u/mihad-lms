@@ -5,7 +5,9 @@ import Icon from './Icon';
 import { normalizeUrl, meetingApp, embedFor } from '@/lib/links';
 import { ACCEPT, MAX_FILE_MB, isStoredFile, downloadUrl, fmtSize } from '@/lib/fileTypes';
 import { FileViewerModal } from './FileViewer';
+import { useUploadLimit, uploadFile } from '@/lib/upload';
 import { useSession } from './SessionProvider';
+import DoubtDialog from './DoubtDialog';
 
 /* ---------------------------------------------------------------- */
 /* Brand mark — the official Mihad Training logo.                    */
@@ -93,6 +95,7 @@ export function Badge({ tone = 'slate', children }) {
     amber: 'bg-amber-100 text-amber-800',
     maroon: 'bg-maroon-50 text-maroon',
     gold: 'bg-gold-50 text-gold-600',
+    blue: 'bg-sky-100 text-sky-800',
   };
   return <span className={`chip ${tones[tone] || tones.slate}`}>{children}</span>;
 }
@@ -242,95 +245,7 @@ export function Confirm({ open, onClose, onConfirm, message = 'Delete this recor
 
 /* ---- uploads ------------------------------------------------------- */
 
-let limitPromise;
-/** { mode: 'r2' | 'direct', maxMB } — fetched once per page load. */
-export function getUploadLimit() {
-  if (!limitPromise) {
-    limitPromise = fetch('/api/upload/sign')
-      .then((r) => r.json())
-      .then((d) => (d?.ok ? { mode: d.mode, maxMB: d.maxMB } : { mode: 'direct', maxMB: MAX_FILE_MB }))
-      .catch(() => ({ mode: 'direct', maxMB: MAX_FILE_MB }));
-  }
-  return limitPromise;
-}
-
-export function useUploadLimit() {
-  const [limit, setLimit] = useState({ mode: 'direct', maxMB: MAX_FILE_MB });
-  useEffect(() => {
-    let alive = true;
-    getUploadLimit().then((l) => alive && setLimit(l));
-    return () => {
-      alive = false;
-    };
-  }, []);
-  return limit;
-}
-
-async function readJson(res) {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-function putWithProgress(url, file, contentType, onProgress) {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', contentType);
-    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(Math.round((e.loaded / e.total) * 100));
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
-    xhr.onerror = () => reject(new Error('Upload failed — check your connection and try again'));
-    xhr.send(file);
-  });
-}
-
-/**
- * Upload one file. Goes straight to Cloudflare R2 when it is set up (large
- * files are fine), otherwise into the database (4 MB limit).
- * Returns { url, fileName, size }.
- */
-export async function uploadFile(file, { purpose, student, onProgress } = {}) {
-  if (!file) throw new Error('Choose a file first');
-
-  const signRes = await fetch('/api/upload/sign', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fileName: file.name, size: file.size, purpose, student }),
-  });
-  const sign = await readJson(signRes);
-  if (!signRes.ok || !sign || sign.ok === false) throw new Error(sign?.error || 'Upload failed');
-
-  if (sign.mode === 'r2') {
-    await putWithProgress(sign.uploadUrl, file, sign.contentType, onProgress);
-    const doneRes = await fetch('/api/upload/complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: sign.id }),
-    });
-    const done = await readJson(doneRes);
-    if (!doneRes.ok || !done || done.ok === false) throw new Error(done?.error || 'Upload could not be confirmed');
-    onProgress?.(100);
-    return done;
-  }
-
-  // database storage
-  if (file.size > sign.maxMB * 1024 * 1024) {
-    throw new Error(`"${file.name}" is larger than ${sign.maxMB} MB. Compress it, or paste a Google Drive / YouTube link instead.`);
-  }
-  const fd = new FormData();
-  fd.append('file', file);
-  if (purpose) fd.append('purpose', purpose);
-  if (student) fd.append('student', student);
-  const res = await fetch('/api/upload', { method: 'POST', body: fd });
-  const data = await readJson(res);
-  if (!res.ok || !data || data.ok === false) {
-    throw new Error(data?.error || (res.status === 413 ? `File is larger than ${sign.maxMB} MB` : 'Upload failed'));
-  }
-  onProgress?.(100);
-  return data;
-}
+export { getUploadLimit, useUploadLimit, uploadFile } from '@/lib/upload';
 
 /** A file field that accepts EITHER an upload or a pasted link. */
 export function FileOrLink({ value, onChange, name = 'Attachment', fileName = '', purpose, student, hint }) {
@@ -495,6 +410,9 @@ export function FileList({ value = [], onChange, name = 'Files', purpose, studen
  * so students watch here rather than in Google Drive.
  */
 export function MediaViewer({ url, title, onClose, video = false }) {
+  const { user } = useSession();
+  const canAsk = ['student', 'parent'].includes(user?.role);
+  const [asking, setAsking] = useState(false);
   useEffect(() => {
     const onKey = (ev) => ev.key === 'Escape' && onClose?.();
     window.addEventListener('keydown', onKey);
@@ -511,7 +429,16 @@ export function MediaViewer({ url, title, onClose, video = false }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-6" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="w-full max-w-5xl" onClick={(ev) => ev.stopPropagation()}>
         <div className="mb-2 flex items-center justify-between gap-3 text-white">
-          <p className="truncate text-sm font-semibold">{title}</p>
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold">{title}</p>
+          {canAsk && (
+            <button
+              type="button"
+              onClick={() => setAsking(true)}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-gold px-2.5 py-1.5 text-xs font-bold text-maroon-900 hover:bg-gold-400"
+            >
+              <Icon name="help" className="h-3.5 w-3.5" /> Raise a doubt
+            </button>
+          )}
           <button onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-2xl hover:bg-white/10" aria-label="Close">
             ×
           </button>
@@ -534,6 +461,7 @@ export function MediaViewer({ url, title, onClose, video = false }) {
           )}
         </div>
         <p className="mt-2 text-center text-[11px] text-white/50">Al Mihad Training — for enrolled students only. Please do not share or record.</p>
+        {asking && <DoubtDialog ask={{ link: url, fileName: title || 'Video', askTime: !!(video || e.kind === 'youtube' || e.kind === 'drive') }} onClose={() => setAsking(false)} />}
       </div>
     </div>
   );

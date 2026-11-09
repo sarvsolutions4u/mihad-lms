@@ -16,6 +16,7 @@ const NAV = [
   { href: '/assignments', label: 'Assignments', icon: 'clipboard', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/resources', label: 'Resources', icon: 'folder', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/reports', label: 'Progress Reports', icon: 'chart', roles: ['admin', 'teacher', 'student', 'parent'] },
+  { href: '/messages', label: 'Messages & Doubts', icon: 'chat', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/announcements', label: 'Announcements', icon: 'megaphone', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/fees', label: 'Fees', icon: 'wallet', roles: ['admin', 'parent'] },
   { href: '/people', label: 'People', icon: 'users', roles: ['admin', 'teacher'] },
@@ -41,6 +42,28 @@ export default function Shell({ children }) {
       .then((d) => setFeeAlerts(d?.ok ? d.count : 0))
       .catch(() => {});
   }, [user?.role, pathname]);
+
+  // unread messages / open doubts badge
+  const [msgBadge, setMsgBadge] = useState({ unread: 0, openDoubts: 0 });
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const load = () =>
+      document.visibilityState === 'visible' &&
+      fetch('/api/messages/unread', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((d) => alive && d?.ok && setMsgBadge({ unread: d.unread, openDoubts: d.openDoubts }))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 45 * 1000);
+    const onChange = () => load();
+    window.addEventListener('messages:changed', onChange);
+    return () => {
+      alive = false;
+      clearInterval(t);
+      window.removeEventListener('messages:changed', onChange);
+    };
+  }, [user, pathname]);
 
   // active-time heartbeat: once a minute while the tab is open, visible and in use
   useEffect(() => {
@@ -93,6 +116,11 @@ export default function Shell({ children }) {
               >
                 <Icon name={item.icon} />
                 {user?.role === 'admin' && item.adminLabel ? item.adminLabel : item.label}
+                {item.href === '/messages' && msgBadge.unread > 0 && (
+                  <span className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white" title={`${msgBadge.unread} unread`}>
+                    {msgBadge.unread}
+                  </span>
+                )}
                 {item.href === '/fees' && feeAlerts > 0 && (
                   <span
                     className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white"
@@ -151,6 +179,12 @@ export default function Shell({ children }) {
             <Icon name="menu" />
           </button>
           <Logo light={false} className="h-8 w-auto" />
+          <Link href="/messages" className="relative ml-auto grid h-9 w-9 place-items-center rounded-lg border border-slate-300 text-slate-600" aria-label="Messages and doubts">
+            <Icon name="chat" />
+            {msgBadge.unread > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 rounded-full bg-red-600 px-1.5 text-[10px] font-bold leading-4 text-white">{msgBadge.unread}</span>
+            )}
+          </Link>
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>

@@ -15,7 +15,7 @@ const PURPOSE_LABEL = { general: 'Course material', submission: 'Student work', 
 
 export async function POST(req) {
   try {
-    const session = await requireSession(['admin', 'teacher', 'student']);
+    const session = await requireSession(['admin', 'teacher', 'student', 'parent']);
     const { id } = await req.json();
     await dbConnect();
 
@@ -53,7 +53,7 @@ export async function POST(req) {
 
       meta.status = 'ready';
       await meta.save();
-      await logActivity({
+      if (meta.purpose !== 'message') await logActivity({
         uid: session.uid,
         role: session.role,
         type: 'upload',

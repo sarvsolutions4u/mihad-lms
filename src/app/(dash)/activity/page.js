@@ -24,6 +24,7 @@ const LOG_TYPES = [
   { value: 'uploads', label: 'Uploads & posts' },
   { value: 'submissions', label: 'Submissions' },
   { value: 'files', label: 'Files opened' },
+  { value: 'messages', label: 'Doubts & messages' },
 ];
 
 export default function ActivityPage() {

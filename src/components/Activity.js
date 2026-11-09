@@ -48,6 +48,8 @@ export const EVENT = {
   post: { label: 'Posted', tone: 'gold' },
   submit: { label: 'Submitted', tone: 'amber' },
   download: { label: 'Opened file', tone: 'slate' },
+  doubt: { label: 'Raised doubt', tone: 'red' },
+  message: { label: 'Message', tone: 'blue' },
 };
 
 /** One line of the log. */

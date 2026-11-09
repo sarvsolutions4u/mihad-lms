@@ -141,6 +141,42 @@ Every uploaded file opens in the portal's own viewer instead of a new tab:
 - Server-side writes to R2 (watermarked copies) send an explicit `Content-Length` — R2 refuses
   chunked uploads with **411**.
 
+### Messages & doubts
+
+Menu → **Messages & Doubts** (red badge = unread). Built for doubt-clearing support on the
+short-term playbooks, and works for every programme.
+
+**Raising a doubt from the notes (students and parents)**
+- In a PDF, **select a sentence** → a *Raise a doubt* button pops up next to it. Or press
+  **Snip & ask** and drag over any part of a page (diagrams, equations, scanned pages).
+- In a Word (.docx) file, select text the same way. In a video, press *Ask about this moment*
+  (the time is attached). Google Drive / YouTube videos have *Raise a doubt* with an optional time.
+- The dialog shows the selected text or snip, and **is addressed automatically to the trainer of
+  the subject that file belongs to** (the student can change it, or send it to the office).
+  They can add a photo of their working.
+- Selecting is allowed so students can ask; **copying is still blocked** in the viewer, and the
+  name stamps are left out of the selection.
+
+**Who can talk to whom**
+
+| | can start a conversation with | sees |
+|---|---|---|
+| Student | trainers of their own subjects, the office | their own conversations |
+| Parent | trainers of their children's subjects, the office | their own conversations (not the child's) |
+| Trainer | students enrolled in their subjects, the office | only conversations they are in — never another trainer's |
+| Admin | anyone (writes as *Al Mihad Office*) | **every conversation** (filter by trainer, doubts, unread) and can reply in any |
+
+- Each doubt shows the file and page (click to open the notes at that page), the quoted text or
+  snip, and the conversation. Trainers *Mark answered*; a student's follow-up re-opens it.
+- Students see office replies as *Al Mihad Office*; staff see which admin wrote.
+- Dashboard: trainers get **Doubts waiting for an answer**; students get **My doubts**.
+- Every doubt and reply is also in **Activity Logs → Doubts & messages** (trainers see only
+  their own subjects there).
+- Files sent in messages (snips, photos, attachments — up to 20 MB) can be opened only by the
+  people in that conversation and the admin.
+- Data: `Thread` (two sides, subject, status, unread) and `Message` (text, `ref` = file / page /
+  video time / quote / snip, attachments). APIs under `/api/messages`.
+
 ### Fee alerts
 
 Unpaid fees past their due date turn **overdue** automatically. Admins see a red count on *Fees* in

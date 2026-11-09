@@ -8,6 +8,7 @@ import { PageHeader, Card, Stat, Badge, Empty, Spinner, Alert, JoinButton } from
 import Icon from '@/components/Icon';
 import SubjectCard from '@/components/SubjectCard';
 import { classLinkFor } from '@/lib/links';
+import { DoubtsCard } from '@/components/Messages';
 import { kindOf, fmtRange } from '@/lib/programs';
 
 const money = (n) => `AED ${(Number(n) || 0).toLocaleString()}`;
@@ -94,6 +95,8 @@ export default function DashboardPage() {
           )}
         </Card>
       )}
+
+      <DoubtsCard me={user} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {data.stats.map((s) => (

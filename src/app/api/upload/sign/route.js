@@ -25,12 +25,18 @@ export async function GET() {
  * If R2 is not set up yet, replies { mode: 'direct' } and the browser falls
  * back to POST /api/upload (stored in the database, 4 MB limit).
  */
+const MESSAGE_MAX_MB = 20;
+
 export async function POST(req) {
   try {
-    const session = await requireSession(['admin', 'teacher', 'student']);
+    const session = await requireSession(['admin', 'teacher', 'student', 'parent']);
     if (!r2Configured()) return ok({ mode: 'direct', maxMB: MAX_FILE_BYTES / 1024 / 1024 });
 
     const { fileName, size, purpose = 'general', student } = await req.json();
+    if (session.role === 'parent' && purpose !== 'message') return fail('Parents can attach files to messages only', 403);
+    if (purpose === 'message' && Number(size) > MESSAGE_MAX_MB * 1024 * 1024) {
+      return fail(`Files sent in messages can be up to ${MESSAGE_MAX_MB} MB`, 413);
+    }
     const contentType = typeFor(fileName);
     if (!contentType) return fail('This file type is not allowed. Use PDF, Word, Excel, PowerPoint, images, audio, MP4 or ZIP.', 415);
     if (!(Number(size) > 0)) return fail('The file is empty', 422);
@@ -38,7 +44,7 @@ export async function POST(req) {
       return fail(`File is larger than ${R2_MAX_MB} MB. For long videos, paste a YouTube or Google Drive link instead.`, 413);
     }
 
-    const meta = { purpose: ['fee', 'submission'].includes(purpose) ? purpose : 'general' };
+    const meta = { purpose: ['fee', 'submission', 'message'].includes(purpose) ? purpose : 'general' };
     if (meta.purpose === 'fee') {
       if (session.role !== 'admin') return fail('Only the office can upload fee documents', 403);
       if (!mongoose.Types.ObjectId.isValid(String(student || ''))) return fail('Choose the student first', 422);

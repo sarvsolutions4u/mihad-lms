@@ -13,6 +13,7 @@ const GROUPS = {
   uploads: ['upload', 'post'],
   submissions: ['submit'],
   files: ['download'],
+  messages: ['doubt', 'message'],
 };
 
 /**

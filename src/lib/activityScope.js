@@ -27,7 +27,7 @@ export function eventScope(ctx) {
         user: { $in: ctx.studentIds },
         $or: [
           { type: { $in: ['login', 'logout'] } },
-          { type: 'submit', subject: { $in: ctx.subjectIds } },
+          { type: { $in: ['submit', 'doubt', 'message'] }, subject: { $in: ctx.subjectIds } },
           { type: 'download', $or: [{ fileOwner: ctx.uid }, { subject: { $in: ctx.subjectIds } }] },
         ],
       },

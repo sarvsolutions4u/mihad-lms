@@ -136,6 +136,13 @@ async function teacherHasFileInSubjects(session, fileId) {
 
 /** Who may open a file: fee files only for admins and that student's parents. */
 export async function canOpenFile(session, meta = {}) {
+  if (meta.purpose === 'message') {
+    // sent in a conversation: the sender, and whoever can read that conversation
+    if (meta.uploadedBy && String(meta.uploadedBy) === String(session.uid)) return true;
+    await dbConnect();
+    const { canOpenMessageFile } = await import('@/lib/messages');
+    return canOpenMessageFile(session, meta._id);
+  }
   if (meta.purpose !== 'fee') {
     // trainers' material stays with each trainer: another teacher can't open it
     // — unless it is attached to one of this trainer's own subjects (e.g. a subject handed over).
