@@ -177,6 +177,45 @@ short-term playbooks, and works for every programme.
 - Data: `Thread` (two sides, subject, status, unread) and `Message` (text, `ref` = file / page /
   video time / quote / snip, attachments). APIs under `/api/messages`.
 
+### Backups (save everything to your computer)
+
+Admin → **Settings → Backup → Back up now**. Everything is saved on the computer you are using:
+
+```
+<the folder you pick>/
+  README.txt
+  database/2026-11-09_14-36/      one dated copy per backup
+     manifest.json                counts + the list of files
+     users.json, subjects.json, attendance.json, fees.json, threads.json, messages.json …
+                                   every collection, MongoDB Extended JSON (ids/dates exact)
+  files/general/<id>__<name>       notes, papers, plans, assignment attachments (originals)
+  files/submission/…               student work
+  files/fee/…                      receipts / invoices
+  files/message/…                  snips, photos and attachments sent in messages
+```
+
+- **Chrome / Edge on a computer:** *Back up now to a folder* — pick the same folder each time
+  (e.g. *Documents › Al Mihad LMS Backups*). Every run adds a new dated database copy and
+  downloads **only files that are new** since the last run. Old dated copies can be deleted by hand.
+- **Other browsers (or to send a single file):** *Download as one .zip* — everything in one file.
+- The card shows when the last backup was taken and by whom (also in Activity Logs).
+- Suggested: weekly, and before a new term or a bulk upload. Keep the folder private — it has
+  student details (passwords are stored only as encrypted hashes).
+- Files are fetched straight from R2 with short links (needs `GET` in the bucket CORS policy);
+  if blocked, files up to 4 MB come through the portal and larger ones are listed as failed.
+
+**Restore** (a technical person, from the project folder, with `.env.local` pointing at the
+database and R2 you want to restore into):
+
+```bash
+npm run restore -- "D:/Al Mihad LMS Backups" --dry-run        # see what would happen
+npm run restore -- "D:/Al Mihad LMS Backups"                  # merge records back (keeps newer ones)
+npm run restore -- "D:/Al Mihad LMS Backups" --files          # …and put the files back in R2
+npm run restore -- "D:/Al Mihad LMS Backups" --replace --files   # make it exactly like the backup
+npm run restore -- backup.zip --only=users,attendance         # just some collections
+npm run restore -- "D:/…" --snapshot=2026-11-02_10-15          # an older dated copy
+```
+
 ### Fee alerts
 
 Unpaid fees past their due date turn **overdue** automatically. Admins see a red count on *Fees* in

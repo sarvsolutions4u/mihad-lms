@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "seed": "node scripts/seed.mjs",
-    "check": "node scripts/check-env.mjs"
+    "check": "node scripts/check-env.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",
     "bcryptjs": "2.4.3",
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.2",
     "jose": "5.9.6",
     "mammoth": "^1.8.0",
     "mongodb": "^7.6.0",

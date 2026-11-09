@@ -5,6 +5,7 @@ import { fmtSize } from '@/lib/fileTypes';
 import { api } from '@/lib/client';
 import { useSession, roleLabel } from '@/components/SessionProvider';
 import { PageHeader, Card, Field, Alert, Spinner } from '@/components/ui';
+import BackupCard from '@/components/Backup';
 
 export default function SettingsPage() {
   const { user, loading } = useSession();
@@ -103,6 +104,7 @@ export default function SettingsPage() {
         </Card>
 
         {user?.role === 'admin' && <StorageCard />}
+        {user?.role === 'admin' && <BackupCard />}
       </div>
     </>
   );
@@ -112,7 +114,7 @@ export default function SettingsPage() {
 /* Admin: how much space is used                                       */
 /* ------------------------------------------------------------------ */
 
-const PURPOSE = { general: 'Notes, papers, plans & assignments', submission: 'Student work', fee: 'Fee receipts & invoices' };
+const PURPOSE = { general: 'Notes, papers, plans & assignments', submission: 'Student work', fee: 'Fee receipts & invoices', message: 'Messages & doubts (snips, photos)' };
 
 function Meter({ used, total }) {
   const pct = total ? Math.min(100, Math.round((used / total) * 100)) : 0;
