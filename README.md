@@ -177,6 +177,39 @@ short-term playbooks, and works for every programme.
 - Data: `Thread` (two sides, subject, status, unread) and `Message` (text, `ref` = file / page /
   video time / quote / snip, attachments). APIs under `/api/messages`.
 
+### Courses (self-study practice, e.g. Spoken English)
+
+Menu → **Courses**. A supporting course for practice between classes — the main teaching stays in class.
+
+- **Course page:** introduction, how to use it, contents by unit, the student's progress bar and
+  *Continue* button; trainers also see **Speaking to review** and **Student progress**
+  (activities done, practice minutes, recordings, average rating, last active).
+- **Activities:**
+  | Kind | Student sees |
+  |---|---|
+  | Conversation | lines as chat bubbles; **Listen** (line highlighted, Normal / Slower / Slow), tap a line to replay, **Role-play** as either person (the portal says the other lines and waits — *Record me* plays the student back locally), *Repeat after me* for one-speaker models |
+  | Listening | the trainer's uploaded audio (MP3/M4A/WAV, view-only) + transcript |
+  | Reading | an uploaded PDF / Word file in the portal viewer |
+  | Notes | useful phrases, tables, common mistakes |
+  | Speaking task | record up to 30 s–3 min in the browser (iPhone and Android), listen, send — max 3 per task |
+- **Trainer feedback** (kept small): 1–5 stars, tick tips (*Clear pronunciation*, *Work on grammar*,
+  *Speak more slowly*…), a short note. The student gets a badge on *Courses* and sees it on the task.
+- **Built-in course:** *Spoken English — Everyday Practice* (4 units, 20 activities: introductions,
+  how are you, family, job, supermarket, park, directions, 5-sentence paragraphs, phone calls, asking
+  for leave, meeting a client). Its 97 conversation lines have natural voice audio generated once with
+  the open-source Kokoro voice model (no AI account, no running cost) — `public/courses/…`, ~2 MB.
+  Regenerate after editing the text: `python3 scripts/course-audio.py src/data/course-library/spoken-english-everyday.json kokoro.onnx voices.bin`.
+- **Adding courses:** *Add a course* → ready-made (a copy you can then edit) or blank. Link it to
+  batches (subjects): their students see it; their trainers manage it. Trainers can link only their
+  own subjects. Lines with no recorded audio are read by the student's browser voice.
+- **Editor:** units and activities (add, edit, reorder, remove); conversations are typed as
+  `Name: line`; upload audio / files; untick *Visible to students* to prepare a course privately.
+  Editing keeps students' progress (activity ids stay the same).
+- **Trainer guide:** *Trainer guide* → print or save as PDF — outline, every script, notes and
+  task, and how to review.
+- Recordings (`purpose: speaking`) can be played only by the student, the course's trainers and admin.
+  Speaking practice appears in Activity Logs as *Speaking practice*.
+
 ### Backups (save everything to your computer)
 
 Admin → **Settings → Backup → Back up now**. Everything is saved on the computer you are using:

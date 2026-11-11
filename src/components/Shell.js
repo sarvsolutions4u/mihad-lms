@@ -14,6 +14,7 @@ const NAV = [
   { href: '/attendance', label: 'Attendance', icon: 'check', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/lesson-plans', label: 'Lesson Planner', icon: 'plan', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/assignments', label: 'Assignments', icon: 'clipboard', roles: ['admin', 'teacher', 'student', 'parent'] },
+  { href: '/courses', label: 'Courses', icon: 'courses', roles: ['admin', 'teacher', 'student'] },
   { href: '/resources', label: 'Resources', icon: 'folder', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/reports', label: 'Progress Reports', icon: 'chart', roles: ['admin', 'teacher', 'student', 'parent'] },
   { href: '/messages', label: 'Messages & Doubts', icon: 'chat', roles: ['admin', 'teacher', 'student', 'parent'] },
@@ -42,6 +43,27 @@ export default function Shell({ children }) {
       .then((d) => setFeeAlerts(d?.ok ? d.count : 0))
       .catch(() => {});
   }, [user?.role, pathname]);
+
+  // courses badge: recordings to review (staff) / new feedback (students)
+  const [courseBadge, setCourseBadge] = useState(0);
+  useEffect(() => {
+    if (!user || !['admin', 'teacher', 'student'].includes(user.role)) return;
+    let alive = true;
+    const load = () =>
+      document.visibilityState === 'visible' &&
+      fetch('/api/courses/summary', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((d) => alive && d?.ok && setCourseBadge(d.count || 0))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 90 * 1000);
+    window.addEventListener('courses:changed', load);
+    return () => {
+      alive = false;
+      clearInterval(t);
+      window.removeEventListener('courses:changed', load);
+    };
+  }, [user, pathname]);
 
   // unread messages / open doubts badge
   const [msgBadge, setMsgBadge] = useState({ unread: 0, openDoubts: 0 });
@@ -116,6 +138,14 @@ export default function Shell({ children }) {
               >
                 <Icon name={item.icon} />
                 {user?.role === 'admin' && item.adminLabel ? item.adminLabel : item.label}
+                {item.href === '/courses' && courseBadge > 0 && (
+                  <span
+                    className="ml-auto rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-maroon-900"
+                    title={user?.role === 'student' ? `${courseBadge} new feedback` : `${courseBadge} recordings to review`}
+                  >
+                    {courseBadge}
+                  </span>
+                )}
                 {item.href === '/messages' && msgBadge.unread > 0 && (
                   <span className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white" title={`${msgBadge.unread} unread`}>
                     {msgBadge.unread}

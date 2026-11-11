@@ -44,7 +44,7 @@ export async function POST(req) {
       return fail(`File is larger than ${R2_MAX_MB} MB. For long videos, paste a YouTube or Google Drive link instead.`, 413);
     }
 
-    const meta = { purpose: ['fee', 'submission', 'message'].includes(purpose) ? purpose : 'general' };
+    const meta = { purpose: ['fee', 'submission', 'message', 'speaking'].includes(purpose) ? purpose : 'general' };
     if (meta.purpose === 'fee') {
       if (session.role !== 'admin') return fail('Only the office can upload fee documents', 403);
       if (!mongoose.Types.ObjectId.isValid(String(student || ''))) return fail('Choose the student first', 422);

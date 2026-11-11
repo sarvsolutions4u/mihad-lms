@@ -1,0 +1,799 @@
+{
+  "key": "spoken-english-everyday",
+  "title": "Spoken English — Everyday Practice",
+  "subtitle": "Listen, repeat and role-play real conversations between your classes",
+  "level": "Beginner to Intermediate",
+  "category": "Spoken English",
+  "color": "maroon",
+  "description": "A supporting practice course for Al Mihad Spoken English students. Each unit has short conversations you can listen to line by line, slow down and role-play, useful phrases, and one small speaking task that your trainer listens to and gives feedback on. Your main learning happens in class — use this course to practise for 10–15 minutes a day.",
+  "howTo": [
+    "Open a conversation and press Listen. Tap any line to hear it again, or slow it down.",
+    "Press Role-play, choose a person, and say their lines when it is your turn.",
+    "Read the Useful phrases and say each one aloud.",
+    "At the end of each unit, record the speaking task (about 1 minute). Your trainer will reply with tips."
+  ],
+  "units": [
+    {
+      "key": "u1",
+      "title": "Unit 1 — Introducing yourself",
+      "summary": "Say hello, introduce yourself, and talk about your home, family and job.",
+      "items": [
+        {
+          "key": "u1-meet",
+          "kind": "conversation",
+          "title": "Meeting someone new",
+          "minutes": 3,
+          "body": "Two new students meet before class. Notice how they give their name, where they are from and where they live.",
+          "lines": [
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "Hi! I don't think we've met. I'm Priya.",
+              "audio": "/courses/spoken-english-everyday/u1-meet-1.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "Hello, Priya. I'm Ahmed. Nice to meet you.",
+              "audio": "/courses/spoken-english-everyday/u1-meet-2.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "Nice to meet you too. Where are you from, Ahmed?",
+              "audio": "/courses/spoken-english-everyday/u1-meet-3.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "I'm from Egypt, but I live in Sharjah now. And you?",
+              "audio": "/courses/spoken-english-everyday/u1-meet-4.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "I'm from Kerala, in India. I live in Al Nahda, near the park.",
+              "audio": "/courses/spoken-english-everyday/u1-meet-5.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "Oh, that's close to here. How long have you been in the UAE?",
+              "audio": "/courses/spoken-english-everyday/u1-meet-6.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "About two years. I came here for work.",
+              "audio": "/courses/spoken-english-everyday/u1-meet-7.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "Me too. Well, I'm happy we are in the same class.",
+              "audio": "/courses/spoken-english-everyday/u1-meet-8.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u1-howareyou",
+          "kind": "conversation",
+          "title": "How are you? — different ways to ask and answer",
+          "minutes": 3,
+          "body": "There are many ways to greet people. Some are formal (for work), some are friendly (for friends).",
+          "lines": [
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "Good morning, Mr. Joseph. How are you today?",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-1.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Good morning, Sara. I'm very well, thank you. And you?",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-2.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "I'm fine, thank you.",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-3.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Hey Sara! How's it going?",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-4.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "Not bad! A little busy, but good. What about you?",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-5.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Same here. How was your weekend?",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-6.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "It was great. I visited my cousin in Dubai.",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-7.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Sounds nice. Have a good day!",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-8.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "You too. See you later!",
+              "audio": "/courses/spoken-english-everyday/u1-howareyou-9.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u1-phrases",
+          "kind": "notes",
+          "title": "Useful phrases — introductions and greetings",
+          "minutes": 3,
+          "body": "## Introducing yourself\n- My name is … / I'm …\n- I'm from … (country / state / city)\n- I live in … (area / city)\n- I work as a … / I work at …\n- I'm learning English because …\n\n## Asking about others\n- Where are you from?\n- Where do you live?\n- What do you do? (= What is your job?)\n- How long have you been in the UAE?\n\n## How are you? — answers\n| Formal | Friendly |\n|---|---|\n| I'm very well, thank you. | Not bad! |\n| I'm fine, thank you. And you? | Pretty good, thanks. |\n| Very well, thank you for asking. | Same as always! |\n\n## Common mistakes\n- ✗ I am working in a hospital since 2 years. → ✓ I have worked in a hospital for two years.\n- ✗ My name is Priya and I am belongs to Kerala. → ✓ My name is Priya and I am from Kerala.\n- ✗ What is your good name? → ✓ What is your name?"
+        },
+        {
+          "key": "u1-family",
+          "kind": "conversation",
+          "title": "Talking about home and family",
+          "minutes": 3,
+          "body": "Two colleagues talk about where they live and who they live with.",
+          "lines": [
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "Ravi, do you live with your family here?",
+              "audio": "/courses/spoken-english-everyday/u1-family-1.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "Yes, I live with my wife and my two children.",
+              "audio": "/courses/spoken-english-everyday/u1-family-2.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "That's nice. How old are your children?",
+              "audio": "/courses/spoken-english-everyday/u1-family-3.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "My son is eight and my daughter is five. They go to school in Sharjah.",
+              "audio": "/courses/spoken-english-everyday/u1-family-4.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "Do you live in a flat or a villa?",
+              "audio": "/courses/spoken-english-everyday/u1-family-5.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "We live in a two-bedroom flat. It's small, but it's comfortable. What about you?",
+              "audio": "/courses/spoken-english-everyday/u1-family-6.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "I share a flat with two friends. My parents and my brother live back home in Pakistan.",
+              "audio": "/courses/spoken-english-everyday/u1-family-7.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "You must miss them.",
+              "audio": "/courses/spoken-english-everyday/u1-family-8.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "I do. We video call every evening.",
+              "audio": "/courses/spoken-english-everyday/u1-family-9.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u1-job",
+          "kind": "conversation",
+          "title": "Your job and what you do",
+          "minutes": 3,
+          "body": "Listen to how people describe their job and their daily work.",
+          "lines": [
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "So, Priya, what do you do?",
+              "audio": "/courses/spoken-english-everyday/u1-job-1.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "I'm a staff nurse. I work at a clinic in Al Qasimia.",
+              "audio": "/courses/spoken-english-everyday/u1-job-2.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "That sounds like hard work. What are your working hours?",
+              "audio": "/courses/spoken-english-everyday/u1-job-3.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "I work from eight in the morning to five in the evening, six days a week.",
+              "audio": "/courses/spoken-english-everyday/u1-job-4.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "What do you do every day?",
+              "audio": "/courses/spoken-english-everyday/u1-job-5.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "I check patients, give medicines and help the doctors. And you, what is your job?",
+              "audio": "/courses/spoken-english-everyday/u1-job-6.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "I'm a sales executive in an electronics shop. I talk to customers and explain the products.",
+              "audio": "/courses/spoken-english-everyday/u1-job-7.mp3"
+            },
+            {
+              "speaker": "Priya",
+              "voice": "f",
+              "text": "So you need good English for your job too.",
+              "audio": "/courses/spoken-english-everyday/u1-job-8.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "Exactly. That's why I joined this course.",
+              "audio": "/courses/spoken-english-everyday/u1-job-9.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u1-task",
+          "kind": "speaking",
+          "title": "Speaking task — Introduce yourself",
+          "minutes": 2,
+          "maxSecs": 90,
+          "prompt": "Record a short introduction (about 1 minute). Say at least 6 sentences:\n• your name\n• where you are from\n• where you live now and who you live with\n• your job and your working hours\n• one thing you like to do in your free time\n• why you are learning English",
+          "tips": "Speak slowly and clearly. It is fine to make mistakes — your trainer will help you."
+        }
+      ]
+    },
+    {
+      "key": "u2",
+      "title": "Unit 2 — Everyday situations",
+      "summary": "Shopping, at the park, and asking for and giving directions.",
+      "items": [
+        {
+          "key": "u2-supermarket",
+          "kind": "conversation",
+          "title": "At the supermarket",
+          "minutes": 3,
+          "body": "A customer asks a shop assistant for help and pays at the counter.",
+          "lines": [
+            {
+              "speaker": "Customer",
+              "voice": "f",
+              "text": "Excuse me, where can I find the rice?",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-1.mp3"
+            },
+            {
+              "speaker": "Assistant",
+              "voice": "m",
+              "text": "It's in aisle five, next to the flour and the oil.",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-2.mp3"
+            },
+            {
+              "speaker": "Customer",
+              "voice": "f",
+              "text": "Thank you. Do you have this in a bigger pack?",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-3.mp3"
+            },
+            {
+              "speaker": "Assistant",
+              "voice": "m",
+              "text": "Yes, we have a ten-kilo bag. It's on the bottom shelf.",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-4.mp3"
+            },
+            {
+              "speaker": "Customer",
+              "voice": "f",
+              "text": "Great. Is there any offer on it this week?",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-5.mp3"
+            },
+            {
+              "speaker": "Assistant",
+              "voice": "m",
+              "text": "Yes, it's fifteen percent off until Friday.",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-6.mp3"
+            },
+            {
+              "speaker": "Customer",
+              "voice": "f",
+              "text": "Perfect. Can I pay by card at the counter?",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-7.mp3"
+            },
+            {
+              "speaker": "Assistant",
+              "voice": "m",
+              "text": "Of course. Would you like a bag?",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-8.mp3"
+            },
+            {
+              "speaker": "Customer",
+              "voice": "f",
+              "text": "No, thank you. I brought my own.",
+              "audio": "/courses/spoken-english-everyday/u2-supermarket-9.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u2-park",
+          "kind": "conversation",
+          "title": "At the park",
+          "minutes": 3,
+          "body": "Two neighbours start a friendly conversation in the evening at the park.",
+          "lines": [
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Good evening! Do you come here every day?",
+              "audio": "/courses/spoken-english-everyday/u2-park-1.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "Almost every day. I walk for thirty minutes after work.",
+              "audio": "/courses/spoken-english-everyday/u2-park-2.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "That's a good habit. The weather is lovely this time of year.",
+              "audio": "/courses/spoken-english-everyday/u2-park-3.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "Yes, it's not too hot in the evening now. Is that your son?",
+              "audio": "/courses/spoken-english-everyday/u2-park-4.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Yes, that's Daniel, on the swings. He loves coming here.",
+              "audio": "/courses/spoken-english-everyday/u2-park-5.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "He looks very happy. Is the play area open on Fridays too?",
+              "audio": "/courses/spoken-english-everyday/u2-park-6.mp3"
+            },
+            {
+              "speaker": "Joseph",
+              "voice": "m",
+              "text": "Yes, but it gets very crowded. Saturday morning is quieter.",
+              "audio": "/courses/spoken-english-everyday/u2-park-7.mp3"
+            },
+            {
+              "speaker": "Sara",
+              "voice": "f",
+              "text": "Thanks for the tip. Enjoy your evening!",
+              "audio": "/courses/spoken-english-everyday/u2-park-8.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u2-directions",
+          "kind": "conversation",
+          "title": "Asking for and giving directions",
+          "minutes": 3,
+          "body": "Someone is looking for a pharmacy. Listen for the direction words: straight, turn left, opposite, next to.",
+          "lines": [
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "Excuse me, is there a pharmacy near here?",
+              "audio": "/courses/spoken-english-everyday/u2-directions-1.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "Yes, there's one on the main road. It's about five minutes on foot.",
+              "audio": "/courses/spoken-english-everyday/u2-directions-2.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "How do I get there?",
+              "audio": "/courses/spoken-english-everyday/u2-directions-3.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "Go straight along this street until you reach the traffic signal.",
+              "audio": "/courses/spoken-english-everyday/u2-directions-4.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "Then turn left. The pharmacy is on your right, opposite the bank, next to a small café.",
+              "audio": "/courses/spoken-english-everyday/u2-directions-5.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "So, straight to the signal, turn left, and it's opposite the bank?",
+              "audio": "/courses/spoken-english-everyday/u2-directions-6.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "That's right. You can't miss it.",
+              "audio": "/courses/spoken-english-everyday/u2-directions-7.mp3"
+            },
+            {
+              "speaker": "Ravi",
+              "voice": "m",
+              "text": "Thank you so much for your help.",
+              "audio": "/courses/spoken-english-everyday/u2-directions-8.mp3"
+            },
+            {
+              "speaker": "Fatima",
+              "voice": "f",
+              "text": "You're welcome.",
+              "audio": "/courses/spoken-english-everyday/u2-directions-9.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u2-phrases",
+          "kind": "notes",
+          "title": "Useful phrases — shopping and directions",
+          "minutes": 3,
+          "body": "## In a shop\n- Excuse me, where can I find …?\n- Do you have this in a bigger / smaller size?\n- How much is this? / Is there any offer?\n- Can I pay by card / in cash?\n- Can I return this if it doesn't fit?\n\n## Asking for directions\n- Excuse me, is there a … near here?\n- How do I get to …?\n- Is it far from here? / Can I walk there?\n\n## Giving directions\n| Words | Example |\n|---|---|\n| go straight | Go straight for 200 metres. |\n| turn left / right | Turn right at the traffic signal. |\n| opposite | It's opposite the bank. |\n| next to / beside | It's next to the café. |\n| between | It's between the mosque and the school. |\n| at the corner | The shop is at the corner. |\n\n## Common mistakes\n- ✗ Where is the near pharmacy? → ✓ Where is the nearest pharmacy?\n- ✗ Take left. → ✓ Turn left.\n- ✗ How much this is? → ✓ How much is this?"
+        },
+        {
+          "key": "u2-task",
+          "kind": "speaking",
+          "title": "Speaking task — Give directions",
+          "minutes": 2,
+          "maxSecs": 90,
+          "prompt": "A new neighbour asks you how to get from your building to the nearest supermarket (or bus stop). Record clear directions (about 1 minute). Use at least four of: go straight, turn left, turn right, opposite, next to, between, at the corner.",
+          "tips": "Imagine you are walking the route. Say each step in order."
+        }
+      ]
+    },
+    {
+      "key": "u3",
+      "title": "Unit 3 — Speaking in paragraphs",
+      "summary": "Talk for at least five sentences about a picture or a real situation.",
+      "items": [
+        {
+          "key": "u3-how",
+          "kind": "notes",
+          "title": "How to speak in a paragraph (5 sentences)",
+          "minutes": 3,
+          "body": "When you describe a picture or a situation, answer these five questions — one sentence each:\n\n1. **Where** is it? — *This is a busy supermarket in the evening.*\n2. **Who** is there? — *I can see many families and some shop staff.*\n3. **What** are they doing? — *People are pushing trolleys and choosing fruit.*\n4. **What else** do you notice? — *There is a long queue at the counter.*\n5. **How** does it feel / what do you think? — *It looks busy, but everyone seems happy.*\n\n## Linking words\nfirst, then, next, also, but, because, so, finally\n\n## Tips\n- Use *there is / there are* to describe.\n- Use *-ing* for actions happening now: *A man **is** carry**ing** a box.*\n- Finish with your opinion or feeling."
+        },
+        {
+          "key": "u3-market",
+          "kind": "conversation",
+          "title": "Model answer — A busy market",
+          "minutes": 2,
+          "body": "Listen to a model paragraph. Then pause and say your own version.",
+          "lines": [
+            {
+              "speaker": "Model",
+              "voice": "f",
+              "text": "This is a busy fish and vegetable market early in the morning.",
+              "audio": "/courses/spoken-english-everyday/u3-market-1.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "f",
+              "text": "There are many shops in a long row, and there are lots of people everywhere.",
+              "audio": "/courses/spoken-english-everyday/u3-market-2.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "f",
+              "text": "Some shopkeepers are shouting their prices, and customers are choosing fresh vegetables.",
+              "audio": "/courses/spoken-english-everyday/u3-market-3.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "f",
+              "text": "I can also see a delivery man carrying big boxes of tomatoes to a truck.",
+              "audio": "/courses/spoken-english-everyday/u3-market-4.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "f",
+              "text": "It is noisy and crowded, but I like the energy of a morning market.",
+              "audio": "/courses/spoken-english-everyday/u3-market-5.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u3-weekend",
+          "kind": "conversation",
+          "title": "Model answer — My last weekend",
+          "minutes": 2,
+          "body": "A model paragraph about a real situation, using past tense.",
+          "lines": [
+            {
+              "speaker": "Model",
+              "voice": "m",
+              "text": "Last Friday, I spent the day with my family at Al Majaz Waterfront.",
+              "audio": "/courses/spoken-english-everyday/u3-weekend-1.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "m",
+              "text": "We reached there in the afternoon, when the weather was cool.",
+              "audio": "/courses/spoken-english-everyday/u3-weekend-2.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "m",
+              "text": "First, the children played in the park, and then we walked along the water.",
+              "audio": "/courses/spoken-english-everyday/u3-weekend-3.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "m",
+              "text": "In the evening, we watched the musical fountain and had dinner at a small restaurant.",
+              "audio": "/courses/spoken-english-everyday/u3-weekend-4.mp3"
+            },
+            {
+              "speaker": "Model",
+              "voice": "m",
+              "text": "It was a simple day, but we were very happy and relaxed.",
+              "audio": "/courses/spoken-english-everyday/u3-weekend-5.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u3-task",
+          "kind": "speaking",
+          "title": "Speaking task — Describe a situation",
+          "minutes": 2,
+          "maxSecs": 90,
+          "prompt": "Choose ONE situation and speak for about 1 minute — at least 5 sentences:\n• A bus stop in the morning\n• Your favourite restaurant at lunchtime\n• Your workplace on a busy day\n\nUse the five questions: Where? Who? What are they doing? What else? How does it feel?",
+          "tips": "Use linking words: first, then, also, but, because, finally."
+        }
+      ]
+    },
+    {
+      "key": "u4",
+      "title": "Unit 4 — Business communication",
+      "summary": "Speak politely and professionally: phone calls, requests to your manager, and meeting clients.",
+      "items": [
+        {
+          "key": "u4-phone",
+          "kind": "conversation",
+          "title": "Answering a phone call at work",
+          "minutes": 3,
+          "body": "A receptionist answers a call from a client. Notice the polite phrases.",
+          "lines": [
+            {
+              "speaker": "Receptionist",
+              "voice": "f",
+              "text": "Good morning, Gulf Star Trading. This is Anitha speaking. How may I help you?",
+              "audio": "/courses/spoken-english-everyday/u4-phone-1.mp3"
+            },
+            {
+              "speaker": "Client",
+              "voice": "m",
+              "text": "Good morning. Could I speak to Mr. Hassan in the accounts department, please?",
+              "audio": "/courses/spoken-english-everyday/u4-phone-2.mp3"
+            },
+            {
+              "speaker": "Receptionist",
+              "voice": "f",
+              "text": "May I know who is calling, please?",
+              "audio": "/courses/spoken-english-everyday/u4-phone-3.mp3"
+            },
+            {
+              "speaker": "Client",
+              "voice": "m",
+              "text": "This is Daniel Mathew from Blue Line Logistics.",
+              "audio": "/courses/spoken-english-everyday/u4-phone-4.mp3"
+            },
+            {
+              "speaker": "Receptionist",
+              "voice": "f",
+              "text": "Thank you, Mr. Mathew. I'm sorry, Mr. Hassan is in a meeting right now. Would you like to leave a message?",
+              "audio": "/courses/spoken-english-everyday/u4-phone-5.mp3"
+            },
+            {
+              "speaker": "Client",
+              "voice": "m",
+              "text": "Yes, please. Could you ask him to call me back about invoice number four-five-two?",
+              "audio": "/courses/spoken-english-everyday/u4-phone-6.mp3"
+            },
+            {
+              "speaker": "Receptionist",
+              "voice": "f",
+              "text": "Certainly. May I have your phone number?",
+              "audio": "/courses/spoken-english-everyday/u4-phone-7.mp3"
+            },
+            {
+              "speaker": "Client",
+              "voice": "m",
+              "text": "It's oh-five-oh, one-two-three, four-five-six-seven.",
+              "audio": "/courses/spoken-english-everyday/u4-phone-8.mp3"
+            },
+            {
+              "speaker": "Receptionist",
+              "voice": "f",
+              "text": "Thank you. I'll pass on your message as soon as he is free.",
+              "audio": "/courses/spoken-english-everyday/u4-phone-9.mp3"
+            },
+            {
+              "speaker": "Client",
+              "voice": "m",
+              "text": "Thank you for your help. Goodbye.",
+              "audio": "/courses/spoken-english-everyday/u4-phone-10.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u4-leave",
+          "kind": "conversation",
+          "title": "Asking your manager for leave",
+          "minutes": 3,
+          "body": "An employee asks for two days of leave. Notice: Could I…? / Would it be possible…?",
+          "lines": [
+            {
+              "speaker": "Employee",
+              "voice": "m",
+              "text": "Excuse me, Ms. Reena. Do you have a minute?",
+              "audio": "/courses/spoken-english-everyday/u4-leave-1.mp3"
+            },
+            {
+              "speaker": "Manager",
+              "voice": "f",
+              "text": "Sure, Ravi. What is it?",
+              "audio": "/courses/spoken-english-everyday/u4-leave-2.mp3"
+            },
+            {
+              "speaker": "Employee",
+              "voice": "m",
+              "text": "Would it be possible to take leave next Monday and Tuesday? My sister is getting married.",
+              "audio": "/courses/spoken-english-everyday/u4-leave-3.mp3"
+            },
+            {
+              "speaker": "Manager",
+              "voice": "f",
+              "text": "Congratulations! Let me check the schedule. Who will cover your work?",
+              "audio": "/courses/spoken-english-everyday/u4-leave-4.mp3"
+            },
+            {
+              "speaker": "Employee",
+              "voice": "m",
+              "text": "I have spoken to Arun. He has agreed to handle my customers on those days.",
+              "audio": "/courses/spoken-english-everyday/u4-leave-5.mp3"
+            },
+            {
+              "speaker": "Manager",
+              "voice": "f",
+              "text": "That's good planning. Please send me a leave request by email today.",
+              "audio": "/courses/spoken-english-everyday/u4-leave-6.mp3"
+            },
+            {
+              "speaker": "Employee",
+              "voice": "m",
+              "text": "Of course. I'll send it right away. Thank you for understanding.",
+              "audio": "/courses/spoken-english-everyday/u4-leave-7.mp3"
+            },
+            {
+              "speaker": "Manager",
+              "voice": "f",
+              "text": "No problem. Enjoy the wedding.",
+              "audio": "/courses/spoken-english-everyday/u4-leave-8.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u4-client",
+          "kind": "conversation",
+          "title": "Meeting a client for the first time",
+          "minutes": 3,
+          "body": "A sales executive meets a new client at the office.",
+          "lines": [
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "Good afternoon, Ms. Lina. Welcome to our office. I'm Ahmed, the sales executive.",
+              "audio": "/courses/spoken-english-everyday/u4-client-1.mp3"
+            },
+            {
+              "speaker": "Lina",
+              "voice": "f",
+              "text": "Good afternoon, Ahmed. Thank you for meeting me.",
+              "audio": "/courses/spoken-english-everyday/u4-client-2.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "It's a pleasure. Please have a seat. Would you like some tea or coffee?",
+              "audio": "/courses/spoken-english-everyday/u4-client-3.mp3"
+            },
+            {
+              "speaker": "Lina",
+              "voice": "f",
+              "text": "Just water, please. Thank you.",
+              "audio": "/courses/spoken-english-everyday/u4-client-4.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "Before we start, could you tell me a little about your company's needs?",
+              "audio": "/courses/spoken-english-everyday/u4-client-5.mp3"
+            },
+            {
+              "speaker": "Lina",
+              "voice": "f",
+              "text": "Of course. We need twenty laptops for our new staff before the end of the month.",
+              "audio": "/courses/spoken-english-everyday/u4-client-6.mp3"
+            },
+            {
+              "speaker": "Ahmed",
+              "voice": "m",
+              "text": "That's no problem. I'll show you three options, and then I can send you a quotation by email today.",
+              "audio": "/courses/spoken-english-everyday/u4-client-7.mp3"
+            },
+            {
+              "speaker": "Lina",
+              "voice": "f",
+              "text": "That sounds perfect.",
+              "audio": "/courses/spoken-english-everyday/u4-client-8.mp3"
+            }
+          ]
+        },
+        {
+          "key": "u4-phrases",
+          "kind": "notes",
+          "title": "Useful phrases — speaking professionally",
+          "minutes": 3,
+          "body": "## Polite requests\n| Too direct | Professional |\n|---|---|\n| Give me the report. | Could you send me the report, please? |\n| I want leave on Monday. | Would it be possible to take leave on Monday? |\n| Call me back. | Could you call me back when you are free? |\n| What? | Sorry, could you repeat that, please? |\n\n## On the phone\n- Good morning, [company]. This is … speaking. How may I help you?\n- May I know who is calling, please?\n- I'm sorry, he is not available right now. Would you like to leave a message?\n- I'll pass on your message.\n\n## In meetings\n- Thank you for your time.\n- Could you tell me a little about …?\n- Let me check and get back to you.\n- I'll send you the details by email today.\n\n## Common mistakes\n- ✗ Kindly do the needful. → ✓ Could you please take care of this?\n- ✗ I will revert back. → ✓ I will get back to you.\n- ✗ Please do one thing, call him. → ✓ Could you please call him?"
+        },
+        {
+          "key": "u4-task",
+          "kind": "speaking",
+          "title": "Speaking task — Leave a voicemail for a client",
+          "minutes": 2,
+          "maxSecs": 90,
+          "prompt": "You need to move tomorrow's 10 a.m. meeting with a client to Thursday. Leave a short, polite voicemail (about 1 minute):\n• greet the client and say who you are and your company\n• explain the change and give a short reason\n• suggest a new time\n• ask them to confirm, and give your phone number\n• thank them and say goodbye",
+          "tips": "Use: I'm calling to…, Would it be possible…?, Could you please confirm…?"
+        }
+      ]
+    }
+  ]
+}

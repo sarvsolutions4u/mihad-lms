@@ -38,6 +38,9 @@ const TYPES = {
   mp3: 'audio/mpeg',
   m4a: 'audio/mp4',
   wav: 'audio/wav',
+  webm: 'audio/webm',
+  ogg: 'audio/ogg',
+  aac: 'audio/aac',
   mp4: 'video/mp4',
   zip: 'application/zip',
 };
@@ -120,7 +123,7 @@ export async function deleteFile(id) {
 async function teacherHasFileInSubjects(session, fileId) {
   if (!fileId) return false;
   await dbConnect();
-  const { Subject, Resource, Task, LessonPlan, Submission } = await import('@/models');
+  const { Subject, Resource, Task, LessonPlan, Submission, Course } = await import('@/models');
   const subjects = (await Subject.find({ teacher: session.uid }).select('_id').lean()).map((x) => x._id);
   if (!subjects.length) return false;
   const url = new RegExp(`^/api/files/${String(fileId).replace(/[^a-f0-9]/g, '')}`);
@@ -130,6 +133,7 @@ async function teacherHasFileInSubjects(session, fileId) {
     Task.exists({ subject: { $in: subjects }, attachmentUrl: url }),
     LessonPlan.exists({ subject: { $in: subjects }, 'attachments.url': url }),
     Submission.exists({ task: { $in: tasks.map((t) => t._id) }, url }),
+    Course.exists({ subjects: { $in: subjects }, $or: [{ 'units.items.audio': url }, { 'units.items.file.url': url }, { 'units.items.lines.audio': url }] }),
   ]);
   return hits.some(Boolean);
 }
@@ -142,6 +146,15 @@ export async function canOpenFile(session, meta = {}) {
     await dbConnect();
     const { canOpenMessageFile } = await import('@/lib/messages');
     return canOpenMessageFile(session, meta._id);
+  }
+  if (meta.purpose === 'speaking') {
+    // a student's speaking-practice recording: the student, their course's trainers, admin
+    if (meta.uploadedBy && String(meta.uploadedBy) === String(session.uid)) return true;
+    if (session.role === 'admin') return true;
+    if (session.role !== 'teacher') return false;
+    await dbConnect();
+    const { canReviewRecording } = await import('@/lib/courses');
+    return canReviewRecording(session, meta._id);
   }
   if (meta.purpose !== 'fee') {
     // trainers' material stays with each trainer: another teacher can't open it

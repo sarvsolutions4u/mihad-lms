@@ -408,7 +408,7 @@ const StoredFileSchema = new Schema(
     name: { type: String, required: true, trim: true },
     size: { type: Number, default: 0 },
     contentType: { type: String, default: 'application/octet-stream' },
-    purpose: { type: String, default: 'general' }, // general | fee | submission | message
+    purpose: { type: String, default: 'general' }, // general | fee | submission | message | speaking
     student: { type: ObjectId, ref: 'User' }, // for fee files
     uploadedBy: { type: ObjectId, ref: 'User' },
     role: { type: String },
@@ -459,6 +459,98 @@ const DailyActiveSchema = new Schema(
 );
 DailyActiveSchema.index({ user: 1, date: 1 }, { unique: true });
 DailyActiveSchema.index({ date: 1 });
+
+/* ------------------------------------------------------------------ */
+/* Courses — self-study practice courses (e.g. Spoken English)         */
+/*   A course is shown to students of the subjects it is linked to and */
+/*   managed by those subjects' trainers. Units hold items:            */
+/*   conversation (lines + audio), audio, file, notes, speaking task.  */
+/* ------------------------------------------------------------------ */
+
+export const COURSE_ITEM_KINDS = ['conversation', 'audio', 'file', 'notes', 'speaking'];
+
+const CourseLineSchema = new Schema(
+  {
+    speaker: { type: String, trim: true, default: '' },
+    voice: { type: String, enum: ['f', 'm', ''], default: '' },
+    text: { type: String, trim: true, default: '' },
+    audio: { type: String, default: '' }, // /courses/... (built-in) or /api/files/<id> (uploaded)
+  },
+  { _id: false }
+);
+
+const CourseItemSchema = new Schema({
+  key: String, // built-in content key
+  kind: { type: String, enum: COURSE_ITEM_KINDS, required: true },
+  title: { type: String, trim: true, required: true },
+  minutes: { type: Number, default: 0 },
+  body: { type: String, default: '' }, // intro / notes (simple markdown)
+  lines: [CourseLineSchema], // conversation
+  audio: { type: String, default: '' }, // whole-conversation or listening audio (/api/files/<id>)
+  audioName: String,
+  file: { url: String, name: String, size: Number }, // a PDF / Word file
+  prompt: { type: String, default: '' }, // speaking task
+  tips: { type: String, default: '' },
+  maxSecs: { type: Number, default: 90 },
+});
+
+const CourseUnitSchema = new Schema({
+  key: String,
+  title: { type: String, trim: true, required: true },
+  summary: { type: String, default: '' },
+  items: [CourseItemSchema],
+});
+
+const CourseSchema = new Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    subtitle: { type: String, default: '' },
+    description: { type: String, default: '' },
+    howTo: [String],
+    level: { type: String, default: '' },
+    category: { type: String, default: '' },
+    libraryKey: { type: String, default: '' }, // which built-in course it came from
+    subjects: [{ type: ObjectId, ref: 'Subject', index: true }],
+    published: { type: Boolean, default: true },
+    units: [CourseUnitSchema],
+    createdBy: { type: ObjectId, ref: 'User' },
+  },
+  { timestamps: true }
+);
+
+const CourseProgressSchema = new Schema(
+  {
+    course: { type: ObjectId, ref: 'Course', required: true },
+    student: { type: ObjectId, ref: 'User', required: true },
+    done: [{ _id: false, item: ObjectId, at: Date }],
+    practiceSecs: { type: Number, default: 0 },
+    lastItem: ObjectId,
+    lastAt: Date,
+  },
+  { timestamps: true }
+);
+CourseProgressSchema.index({ course: 1, student: 1 }, { unique: true });
+
+const SpeakingAttemptSchema = new Schema(
+  {
+    course: { type: ObjectId, ref: 'Course', required: true, index: true },
+    item: { type: ObjectId, required: true },
+    itemTitle: String,
+    student: { type: ObjectId, ref: 'User', required: true, index: true },
+    audio: { type: String, required: true }, // /api/files/<id>
+    secs: { type: Number, default: 0 },
+    note: { type: String, default: '', maxlength: 500 }, // student's note to the trainer
+    status: { type: String, enum: ['submitted', 'reviewed'], default: 'submitted', index: true },
+    // the trainer's small feedback
+    rating: { type: Number, min: 1, max: 5 },
+    tags: [String],
+    feedback: { type: String, default: '', maxlength: 2000 },
+    reviewedBy: { type: ObjectId, ref: 'User' },
+    reviewedAt: Date,
+    seen: { type: Boolean, default: false }, // student has seen the feedback
+  },
+  { timestamps: true }
+);
 
 /* ------------------------------------------------------------------ */
 /* Messages — doubts and conversations                                 */
@@ -533,6 +625,9 @@ export const StoredFile = models.StoredFile || model('StoredFile', StoredFileSch
 export const Activity = models.Activity || model('Activity', ActivitySchema);
 export const DailyActive = models.DailyActive || model('DailyActive', DailyActiveSchema);
 export const Thread = models.Thread || model('Thread', ThreadSchema);
+export const Course = models.Course || model('Course', CourseSchema);
+export const CourseProgress = models.CourseProgress || model('CourseProgress', CourseProgressSchema);
+export const SpeakingAttempt = models.SpeakingAttempt || model('SpeakingAttempt', SpeakingAttemptSchema);
 export const Message = models.Message || model('Message', MessageSchema);
 
 export const MODELS = {

@@ -53,7 +53,7 @@ export async function POST(req) {
 
       meta.status = 'ready';
       await meta.save();
-      if (meta.purpose !== 'message') await logActivity({
+      if (!['message', 'speaking'].includes(meta.purpose)) await logActivity({
         uid: session.uid,
         role: session.role,
         type: 'upload',

@@ -28,7 +28,7 @@ export async function POST(req) {
     if (!file || typeof file === 'string') return fail('No file received', 422);
 
     const asked = String(form.get('purpose') || 'general');
-    const purpose = ['general', 'fee', 'submission', 'message'].includes(asked) ? asked : 'general';
+    const purpose = ['general', 'fee', 'submission', 'message', 'speaking'].includes(asked) ? asked : 'general';
     if (session.role === 'parent' && purpose !== 'message') return fail('Parents can attach files to messages only', 403);
     const meta = { uploadedBy: String(session.uid), role: session.role, purpose, uploaderName: session.name || '' };
 
@@ -40,7 +40,7 @@ export async function POST(req) {
     }
 
     const saved = await saveFile(file, meta);
-    if (purpose !== 'message') await logActivity({ uid: session.uid, role: session.role, type: 'upload', name: saved.name, detail: PURPOSE_LABEL[purpose] || purpose, req });
+    if (!['message', 'speaking'].includes(purpose)) await logActivity({ uid: session.uid, role: session.role, type: 'upload', name: saved.name, detail: PURPOSE_LABEL[purpose] || purpose, req });
     return ok({ url: saved.url, fileName: saved.name, size: saved.size, contentType: saved.contentType, watermark: saved.watermark || '' });
   } catch (err) {
     return handleError(err);
