@@ -116,7 +116,7 @@ function MessagesInner() {
                   key={v.key}
                   type="button"
                   onClick={() => setView(v.key)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${view === v.key ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-slate-100'}`}
+                  className={`notap rounded-lg px-3 py-1.5 text-xs font-semibold [@media(pointer:coarse)]:py-2.5 ${view === v.key ? 'bg-maroon text-white' : 'text-slate-600 hover:bg-slate-100'}`}
                 >
                   {v.label}
                 </button>

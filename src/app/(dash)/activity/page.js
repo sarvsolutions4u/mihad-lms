@@ -145,18 +145,18 @@ export default function ActivityPage() {
               <Empty title="Nobody here" hint={isAdmin ? undefined : 'Students enrolled in your subjects show here.'} />
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px] text-sm">
+                <table className="w-full text-sm sm:min-w-[860px]">
                   <thead>
                     <tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
                       <th className="px-5 py-2.5">Name</th>
                       <th className="px-3 py-2.5">Status</th>
                       <th className="px-3 py-2.5">Last sign-in</th>
-                      <th className="px-3 py-2.5 text-right">Active today</th>
-                      <th className="px-3 py-2.5 text-right">Active ({PERIODS.find((p) => p.value === days)?.label.toLowerCase()})</th>
-                      <th className="px-3 py-2.5 text-right">Sign-ins</th>
-                      <th className="px-3 py-2.5 text-right">Uploads</th>
-                      <th className="px-3 py-2.5 text-right">Submitted</th>
-                      <th className="px-5 py-2.5 text-right">Files opened</th>
+                      <th className="hidden sm:table-cell px-3 py-2.5 text-right">Active today</th>
+                      <th className="hidden sm:table-cell px-3 py-2.5 text-right">Active ({PERIODS.find((p) => p.value === days)?.label.toLowerCase()})</th>
+                      <th className="hidden sm:table-cell px-3 py-2.5 text-right">Sign-ins</th>
+                      <th className="hidden sm:table-cell px-3 py-2.5 text-right">Uploads</th>
+                      <th className="hidden sm:table-cell px-3 py-2.5 text-right">Submitted</th>
+                      <th className="hidden sm:table-cell px-5 py-2.5 text-right">Files opened</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -173,15 +173,15 @@ export default function ActivityPage() {
                           <SeenStatus online={p.online} lastSeenAt={p.lastSeenAt} />
                         </td>
                         <td className="px-3 py-2.5 text-xs text-slate-600">{p.lastLoginAt ? fmtWhen(p.lastLoginAt) : <Badge tone="amber">Never</Badge>}</td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-slate-700">{p.activeToday ? fmtMins(p.activeToday) : '—'}</td>
-                        <td className="px-3 py-2.5 text-right text-slate-700">
+                        <td className="hidden sm:table-cell px-3 py-2.5 text-right font-semibold text-slate-700">{p.activeToday ? fmtMins(p.activeToday) : '—'}</td>
+                        <td className="hidden sm:table-cell px-3 py-2.5 text-right text-slate-700">
                           {p.activeMinutes ? fmtMins(p.activeMinutes) : '—'}
                           {p.activeDays > 0 && <span className="block text-[10px] text-slate-400">{p.activeDays} day{p.activeDays === 1 ? '' : 's'}</span>}
                         </td>
-                        <td className="px-3 py-2.5 text-right">{p.logins || '—'}</td>
-                        <td className="px-3 py-2.5 text-right">{p.uploads || '—'}</td>
-                        <td className="px-3 py-2.5 text-right">{p.submissions || '—'}</td>
-                        <td className="px-5 py-2.5 text-right">{p.opened || '—'}</td>
+                        <td className="hidden sm:table-cell px-3 py-2.5 text-right">{p.logins || '—'}</td>
+                        <td className="hidden sm:table-cell px-3 py-2.5 text-right">{p.uploads || '—'}</td>
+                        <td className="hidden sm:table-cell px-3 py-2.5 text-right">{p.submissions || '—'}</td>
+                        <td className="hidden sm:table-cell px-5 py-2.5 text-right">{p.opened || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -190,7 +190,7 @@ export default function ActivityPage() {
             )}
           </Card>
           <p className="mt-3 text-xs text-slate-500">
-            Active time counts minutes a portal tab is open and in use (no input for 5 minutes = idle). Click a person for their day-by-day detail.
+            Active time counts minutes a portal tab is open and in use (no input for 5 minutes = idle). Click or tap a person for their day-by-day detail.
           </p>
         </>
       )}

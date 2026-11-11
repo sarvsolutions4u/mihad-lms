@@ -139,33 +139,67 @@ export function Alert({ tone = 'error', children, onClose }) {
 
 /* ---------------------------------------------------------------- */
 
+/**
+ * Tables become stacked cards on phones (below 640px): the first column is the
+ * card title, the other columns are "label — value" lines and columns without a
+ * header (actions) sit at the bottom. Tablets and computers get the normal table.
+ * A column can set `phone: false` to drop it from the phone cards.
+ */
 export function Table({ columns, rows, empty, rowKey = (r) => r._id }) {
   if (!rows?.length) return empty || <Empty />;
+  const cell = (c, row) => (c.render ? c.render(row) : row[c.key] ?? '—');
+  const [first, ...rest] = columns.filter((c) => c.phone !== false);
+  const labelled = rest.filter((c) => c.header);
+  const bare = rest.filter((c) => !c.header);
   return (
-    <div className="-mx-5 overflow-x-auto px-5">
-      <table className="w-full min-w-[640px] border-collapse">
-        <thead>
-          <tr className="border-b border-slate-200">
-            {columns.map((c) => (
-              <th key={c.key} className={`th ${c.align === 'right' ? 'text-right' : ''}`}>
-                {c.header}
-              </th>
+    <>
+      <ul className="-mx-5 divide-y divide-slate-100 border-t border-slate-100 sm:hidden">
+        {rows.map((row) => (
+          <li key={rowKey(row)} className="px-5 py-3">
+            <div className="min-w-0 break-words text-sm text-slate-800">{cell(first, row)}</div>
+            {labelled.length > 0 && (
+              <dl className="mt-1.5 space-y-1">
+                {labelled.map((c) => (
+                  <div key={c.key} className="flex items-start justify-between gap-3 text-sm">
+                    <dt className="shrink-0 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{c.header}</dt>
+                    <dd className="min-w-0 break-words text-right text-slate-700">{cell(c, row)}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {bare.map((c) => (
+              <div key={c.key} className="mt-2 flex flex-wrap justify-end gap-2">
+                {cell(c, row)}
+              </div>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {rows.map((row) => (
-            <tr key={rowKey(row)} className="hover:bg-slate-50/70">
+          </li>
+        ))}
+      </ul>
+      <div className="-mx-5 hidden overflow-x-auto px-5 sm:block">
+        <table className="w-full min-w-[640px] border-collapse">
+          <thead>
+            <tr className="border-b border-slate-200">
               {columns.map((c) => (
-                <td key={c.key} className={`td ${c.align === 'right' ? 'text-right' : ''}`}>
-                  {c.render ? c.render(row) : row[c.key] ?? '—'}
-                </td>
+                <th key={c.key} className={`th ${c.align === 'right' ? 'text-right' : ''}`}>
+                  {c.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.map((row) => (
+              <tr key={rowKey(row)} className="hover:bg-slate-50/70">
+                {columns.map((c) => (
+                  <td key={c.key} className={`td ${c.align === 'right' ? 'text-right' : ''}`}>
+                    {c.render ? c.render(row) : row[c.key] ?? '—'}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 

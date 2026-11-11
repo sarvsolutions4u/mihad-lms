@@ -135,3 +135,56 @@ input[type='radio'] {
 .textLayer.selecting .endOfContent {
   top: 0;
 }
+
+/* ------------------------------------------------------------------
+   Touch screens (phones and tablets). Fingers need bigger targets than a
+   mouse, and iPhones zoom the whole page into any text box smaller than
+   16px — so on touch screens:
+   - text boxes, dropdowns and message boxes use 16px text (no zoom-in),
+   - buttons are at least 44px (40px for small ones) tall,
+   - checkboxes are bigger,
+   - small text links, filter chips and toggles get an invisible larger
+     tap area, so the layout looks the same but is easier to hit
+     (add class "notap" where that area would reach a neighbour).
+   ------------------------------------------------------------------ */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  :is(.btn, .btn-primary, .btn-gold, .btn-ghost, .btn-danger) {
+    min-height: 2.75rem;
+  }
+  :is(.btn, .btn-primary, .btn-gold, .btn-ghost, .btn-danger).btn-sm {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+  }
+  input[type='checkbox'],
+  input[type='radio'] {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+  :is(a, button).text-xs:not(.btn):not(.btn-primary):not(.btn-gold):not(.btn-ghost):not(.btn-danger):not(.absolute):not(.fixed):not(.sticky):not(.block):not(.flex):not(.w-full):not(.notap),
+  :is(a, button).text-\[11px\]:not(.btn):not(.btn-primary):not(.btn-gold):not(.btn-ghost):not(.btn-danger):not(.absolute):not(.fixed):not(.sticky):not(.block):not(.flex):not(.w-full):not(.notap),
+  a.chip:not(.absolute) {
+    position: relative;
+  }
+  :is(a, button).text-xs:not(.btn):not(.btn-primary):not(.btn-gold):not(.btn-ghost):not(.btn-danger):not(.absolute):not(.fixed):not(.sticky):not(.block):not(.flex):not(.w-full):not(.notap)::after,
+  :is(a, button).text-\[11px\]:not(.btn):not(.btn-primary):not(.btn-gold):not(.btn-ghost):not(.btn-danger):not(.absolute):not(.fixed):not(.sticky):not(.block):not(.flex):not(.w-full):not(.notap)::after,
+  a.chip:not(.absolute)::after {
+    content: '';
+    position: absolute;
+    inset: -10px 0;
+  }
+  a.text-xs:not(.btn):not(.btn-primary):not(.btn-gold):not(.btn-ghost):not(.btn-danger):not(.absolute):not(.fixed):not(.sticky):not(.block):not(.flex):not(.w-full):not(.notap)::after {
+    inset: -10px -8px;
+  }
+}
+
+/* very small labels (badges, stat captions) are a size up on phones */
+@media (max-width: 639px) {
+  .text-\[10px\] {
+    font-size: 11px;
+  }
+}

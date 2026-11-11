@@ -421,11 +421,11 @@ function PdfView({ info, viewOnly, onPage, canAsk, onAsk, initialPage }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-center gap-1.5 whitespace-nowrap border-b border-white/10 bg-slate-900 px-2 py-1.5 text-xs text-white/80 sm:gap-2 sm:px-3">
-        <button type="button" className="grid h-7 w-7 place-items-center rounded hover:bg-white/10" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))} aria-label="Zoom out">
+        <button type="button" className="grid h-9 w-9 place-items-center rounded hover:bg-white/10 sm:h-7 sm:w-7" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))} aria-label="Zoom out">
           −
         </button>
         <span className="w-12 text-center">{Math.round(zoom * 100)}%</span>
-        <button type="button" className="grid h-7 w-7 place-items-center rounded hover:bg-white/10" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} aria-label="Zoom in">
+        <button type="button" className="grid h-9 w-9 place-items-center rounded hover:bg-white/10 sm:h-7 sm:w-7" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} aria-label="Zoom in">
           +
         </button>
         <button type="button" className="hidden rounded px-2 py-1 hover:bg-white/10 sm:inline" onClick={() => setZoom(1)}>

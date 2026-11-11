@@ -253,15 +253,15 @@ export default function CoursePage({ params }) {
           </div>
         ) : (
           <div className="card overflow-x-auto p-0">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full text-sm sm:min-w-[720px]">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500">
                   <th className="px-5 py-2.5">Student</th>
                   <th className="px-3 py-2.5">Progress</th>
-                  <th className="px-3 py-2.5 text-right">Practice</th>
-                  <th className="px-3 py-2.5 text-right">Recordings</th>
-                  <th className="px-3 py-2.5 text-right">Avg rating</th>
-                  <th className="px-5 py-2.5 text-right">Last active</th>
+                  <th className="hidden sm:table-cell px-3 py-2.5 text-right">Practice</th>
+                  <th className="px-3 py-2.5 text-right">Rec<span className="hidden sm:inline">ordings</span></th>
+                  <th className="hidden sm:table-cell px-3 py-2.5 text-right">Avg rating</th>
+                  <th className="hidden sm:table-cell px-5 py-2.5 text-right">Last active</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -275,7 +275,7 @@ export default function CoursePage({ params }) {
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-2 w-16 overflow-hidden rounded-full bg-slate-100 sm:w-28">
                           <div className="h-full rounded-full bg-gold" style={{ width: `${s.percent}%` }} />
                         </div>
                         <span className="text-xs text-slate-600">
@@ -283,13 +283,13 @@ export default function CoursePage({ params }) {
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-2.5 text-right">{s.practiceMins ? `${s.practiceMins} min` : '—'}</td>
+                    <td className="hidden sm:table-cell px-3 py-2.5 text-right">{s.practiceMins ? `${s.practiceMins} min` : '—'}</td>
                     <td className="px-3 py-2.5 text-right">
                       {s.recordings || '—'}
                       {s.recordings > s.reviewed && <Badge tone="amber">{s.recordings - s.reviewed} new</Badge>}
                     </td>
-                    <td className="px-3 py-2.5 text-right">{s.avgRating ? `${s.avgRating} ★` : '—'}</td>
-                    <td className="px-5 py-2.5 text-right text-xs text-slate-500">{fmtDate(s.lastAt)}</td>
+                    <td className="hidden sm:table-cell px-3 py-2.5 text-right">{s.avgRating ? `${s.avgRating} ★` : '—'}</td>
+                    <td className="hidden sm:table-cell px-5 py-2.5 text-right text-xs text-slate-500">{fmtDate(s.lastAt)}</td>
                   </tr>
                 ))}
               </tbody>

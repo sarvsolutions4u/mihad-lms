@@ -352,11 +352,11 @@ export default function EditCoursePage({ params }) {
       {c.units.map((u, ui) => (
         <section key={u._id || ui} className="card mb-4">
           <header className="flex flex-wrap items-start gap-2 border-b border-slate-100 px-5 py-3">
-            <div className="grid min-w-0 flex-1 gap-2">
+            <div className="grid w-full min-w-0 gap-2 sm:w-auto sm:flex-1">
               <input className="input font-bold" value={u.title} onChange={(e) => setUnit(ui, { title: e.target.value })} />
               <input className="input text-sm" placeholder="What this unit covers" value={u.summary || ''} onChange={(e) => setUnit(ui, { summary: e.target.value })} />
             </div>
-            <div className="flex gap-1">
+            <div className="ml-auto flex gap-1">
               <button type="button" className="btn-ghost btn-sm" onClick={() => update({ units: move(c.units, ui, -1) })} aria-label="Move unit up">
                 ↑
               </button>
@@ -379,11 +379,11 @@ export default function EditCoursePage({ params }) {
               const isOpen = open === key;
               return (
                 <li key={key} className="px-5 py-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-md bg-maroon-50 text-maroon">
                       <Icon name={k.icon} className="h-3.5 w-3.5" />
                     </span>
-                    <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpen(isOpen ? null : key)}>
+                    <button type="button" className="min-w-0 flex-1 basis-[calc(100%-2.75rem)] text-left sm:basis-0" onClick={() => setOpen(isOpen ? null : key)}>
                       <span className="block truncate text-sm font-semibold text-slate-800">{it.title}</span>
                       <span className="text-[11px] text-slate-500">
                         {k.label}
@@ -391,23 +391,25 @@ export default function EditCoursePage({ params }) {
                         {it.key ? ' · built-in' : ''}
                       </span>
                     </button>
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setUnit(ui, { items: move(u.items, ii, -1) })} aria-label="Move up">
-                      ↑
-                    </button>
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setUnit(ui, { items: move(u.items, ii, 1) })} aria-label="Move down">
-                      ↓
-                    </button>
-                    <button type="button" className="btn-ghost btn-sm" onClick={() => setOpen(isOpen ? null : key)}>
-                      {isOpen ? 'Close' : 'Edit'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost btn-sm text-red-600"
-                      onClick={() => window.confirm(`Remove “${it.title}”?`) && setUnit(ui, { items: u.items.filter((_, j) => j !== ii) })}
-                      aria-label="Remove"
-                    >
-                      ×
-                    </button>
+                    <div className="ml-auto flex gap-1.5 sm:gap-2">
+                      <button type="button" className="btn-ghost btn-sm" onClick={() => setUnit(ui, { items: move(u.items, ii, -1) })} aria-label="Move up">
+                        ↑
+                      </button>
+                      <button type="button" className="btn-ghost btn-sm" onClick={() => setUnit(ui, { items: move(u.items, ii, 1) })} aria-label="Move down">
+                        ↓
+                      </button>
+                      <button type="button" className="btn-ghost btn-sm" onClick={() => setOpen(isOpen ? null : key)}>
+                        {isOpen ? 'Close' : 'Edit'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm text-red-600"
+                        onClick={() => window.confirm(`Remove “${it.title}”?`) && setUnit(ui, { items: u.items.filter((_, j) => j !== ii) })}
+                        aria-label="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
                   {isOpen && (
                     <div className="mt-3 rounded-lg bg-slate-50 p-4">
