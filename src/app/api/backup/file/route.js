@@ -33,7 +33,11 @@ export async function GET(req) {
         return NextResponse.json({ ok: true, url, fallback: (meta.size || 0) <= STREAM_MAX ? self : '' }, { headers: { 'Cache-Control': 'no-store' } });
       }
       if ((meta.size || 0) > STREAM_MAX) return fail('Too large to stream', 413);
-      const body = await getObjectBuffer(meta.key);
+      const body = await getObjectBuffer(meta.key).catch((e) => {
+        if (/\(404\)/.test(e?.message || '')) return null;
+        throw e;
+      });
+      if (!body) return fail('This file is missing from storage', 404);
       return new Response(body, { headers: { 'Content-Type': 'application/octet-stream', 'Content-Length': String(body.length), 'Cache-Control': 'no-store' } });
     }
 

@@ -156,6 +156,20 @@ export async function canOpenFile(session, meta = {}) {
     const { canReviewRecording } = await import('@/lib/courses');
     return canReviewRecording(session, meta._id);
   }
+  if (meta.purpose === 'submission') {
+    // a student's assignment answer: the student who sent it, their parents,
+    // the trainers of that assignment's subject, and admin — nobody else, even with the link
+    if (meta.uploadedBy && String(meta.uploadedBy) === String(session.uid)) return true;
+    if (session.role === 'admin') return true;
+    await dbConnect();
+    const { getActorContext } = await import('@/lib/access');
+    const { Submission } = await import('@/models');
+    const ctx = await getActorContext(session);
+    const url = new RegExp(`^/api/files/${String(meta._id).replace(/[^a-f0-9]/g, '')}`);
+    if (session.role === 'teacher') return !!(await Submission.exists({ task: { $in: ctx.taskIds }, url }));
+    if (meta.uploadedBy && ctx.studentIds.includes(String(meta.uploadedBy))) return true;
+    return !!(await Submission.exists({ student: { $in: ctx.studentIds }, url }));
+  }
   if (meta.purpose !== 'fee') {
     // trainers' material stays with each trainer: another teacher can't open it
     // — unless it is attached to one of this trainer's own subjects (e.g. a subject handed over).
